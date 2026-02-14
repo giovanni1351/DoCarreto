@@ -4,7 +4,7 @@ Este projeto propõe a criação de uma plataforma mobile centralizada para cone
 A viabilidade do negócio sustenta-se em um modelo de receita via anúncios internos, com uma estrutura de custos focada no desenvolvimento técnico e na manutenção de servidores. O sucesso da iniciativa será medido pelo volume de interações e pela eficácia das conexões realizadas, garantindo que ambas as partes concluam o transporte de forma bem-sucedida e consolidando o app como a ferramenta indispensável para o fluxo de carga no país.
 
 # Equipe
-(SM) Henrique Finatti: 22.123.030-3
-(PO) Giovanni Chahin Morassi: 22.123.025-3
-(DEV) Tiago Fagundes: 22.123.017-0
-(DEV) Mateus Marana: 22.123.026-1
+- (SM) Henrique Finatti: 22.123.030-3
+- (PO) Giovanni Chahin Morassi: 22.123.025-3
+- (DEV) Tiago Fagundes: 22.123.017-0
+- (DEV) Mateus Marana: 22.123.026-1
