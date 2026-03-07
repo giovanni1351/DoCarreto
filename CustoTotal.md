@@ -1,5 +1,5 @@
-PUC Total: 4 + 5 + 4 + 5 = 18
+PUC Total: 4 + 5 + 4 + 5 + 6 = 24
 
-Esforço Total = 18 * 8 = 144
+Esforço Total = 24 * 8 = 192
 
-Custo Total = 144 * 80 = R$ 11.520
+Custo Total = 192 * 80 = R$ 15.360
