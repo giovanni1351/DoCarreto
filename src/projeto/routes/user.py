@@ -7,7 +7,7 @@ from schemas.user import User, UserCreate
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
-router = APIRouter(prefix="/user")
+router = APIRouter(prefix="/user", tags=["User"])
 
 
 @router.post("/")
