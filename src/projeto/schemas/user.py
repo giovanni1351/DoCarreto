@@ -18,3 +18,4 @@ class User(UserCreate, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime | None = Field(default=None)
     deleted_at: datetime | None = Field(default=None)
+ 
