@@ -13,7 +13,7 @@ from settings import LOGGER, SETTINGS
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-LOGGER.info("sCriando o sistema de autenticação")
+LOGGER.info("Criando o sistema de autenticação")
 SECRET_KEY = SETTINGS.SECRET_KEY
 ALGORITHM = SETTINGS.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = SETTINGS.ACCESS_TOKEN_EXPIRE_MINUTES
