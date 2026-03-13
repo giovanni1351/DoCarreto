@@ -37,14 +37,14 @@ async def get_current_user(
             SETTINGS.SECRET_KEY,  # type: ignore
             algorithms=[SETTINGS.ALGORITHM],  # type: ignore
         )
-        username = payload.get("sub")
-        if username is None:
+        email = payload.get("sub")
+        if email is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
+        token_data = TokenData(email=email)
     except InvalidTokenError as e:
         raise credentials_exception from e
     user = (
-        await session.exec(select(User).where(User.username == token_data.username))
+        await session.exec(select(User).where(User.email == token_data.email))
     ).first()
     if user is None:
         raise credentials_exception
@@ -70,10 +70,10 @@ def get_password_hash(password: str | bytes) -> str:
 
 
 async def authenticate_user(
-    username: str, password: str, session: AsyncSession
+    email: str, password: str, session: AsyncSession
 ) -> User | Literal[False]:
-    LOGGER.info(f"Autenticando usuário {username}")
-    user = (await session.exec(select(User).where(User.username == username))).first()
+    LOGGER.info(f"Autenticando usuário {email}")
+    user = (await session.exec(select(User).where(User.email == email))).first()
     if not user:
         return False
     if not verify_password(password, user.password):

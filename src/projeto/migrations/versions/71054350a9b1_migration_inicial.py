@@ -1,8 +1,8 @@
-"""Primeira migration
+"""migration inicial
 
-Revision ID: 252dad475cb5
+Revision ID: 71054350a9b1
 Revises: 
-Create Date: 2025-10-14 16:52:06.442101
+Create Date: 2026-03-13 19:53:34.439759
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision: str = '252dad475cb5'
+revision: str = '71054350a9b1'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,11 +25,11 @@ def upgrade() -> None:
     op.create_table('user',
     sa.Column('nome', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('username', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('sobrenome', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('idade', sa.Integer(), nullable=False),
-    sa.Column('cpf', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('senha', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('email', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('password', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('telefone', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('is_admin', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),

@@ -6,8 +6,7 @@ from sqlmodel import Field, SQLModel  # pyright: ignore[reportUnknownVariableTyp
 
 class UserCreate(SQLModel):
     nome: str | None = None
-    username: str = Field(unique=True)
-    email: str = Field(default="sem_email@gmail.com")
+    email: str = Field(unique=True)
     password: str
     telefone: str
 
@@ -18,4 +17,3 @@ class User(UserCreate, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime | None = Field(default=None)
     deleted_at: datetime | None = Field(default=None)
- 
