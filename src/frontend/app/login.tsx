@@ -9,8 +9,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  const handleLogin = () => {
-    alert("Login: " + email);
+  // const handleLogin = () => {
+  //   alert("Login: " + email);
+  // };
+
+  const handleHome = () => {
+    router.push("/home");
   };
 
   const handleForgotPassword = () => {
@@ -61,7 +65,7 @@ export default function LoginScreen() {
         <Text style={styles.forgotPassword}>Esqueceu a senha?</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+      <TouchableOpacity style={styles.button} onPress={handleHome}>
         <Text style={styles.buttonText}>Entrar</Text>
       </TouchableOpacity>
 

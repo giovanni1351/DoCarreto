@@ -19,6 +19,9 @@ export default function SignUpScreen() {
     router.push("/login");
   };
 
+
+
+
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
