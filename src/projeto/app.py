@@ -1,11 +1,21 @@
 from typing import Any, Literal
-
+from fastapi.middleware.cors import CORSMiddleware  # ← ADICIONE ESTA LINHA
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from routes import demand, token, user
 from uvicorn import run
 
 app = FastAPI()
+
+# ← ADICIONE ISTO (antes de incluir as rotas)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite tudo (desenvolvimento)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(user.router)
 app.include_router(token.router)
 app.include_router(demand.router)
