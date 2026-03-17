@@ -3,6 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-nativ
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
+const API_URL = 'http://127.0.0.1:8000'
+
 export default function LoginScreen() {
 
   const [email, setEmail] = useState("");
