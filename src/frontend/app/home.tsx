@@ -9,6 +9,8 @@ import {
   FlatList,
   Dimensions,
   ActivityIndicator,
+  TextInput,
+  Modal
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 
@@ -38,9 +40,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   userRole = 'motorista', 
   userName = 'Usuário' 
 }) => {
+
   const [fretes, setFretes] = useState<FreteCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>(userRole);
+
+  const [search,setSearch] = useState('');
+  const [selectedUrgencia,setSelectedUrgencia] = useState<'todas'|'alta'|'media'|'baixa'>('todas');
+
+  const [selectedFrete,setSelectedFrete] = useState<FreteCard | null>(null);
+  const [detailsVisible,setDetailsVisible] = useState(false);
 
   useEffect(() => {
     loadInitialData(selectedRole);
@@ -137,6 +146,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
     setTimeout(() => setIsLoading(false), 600);
   };
 
+  const filteredFretes = fretes.filter((f)=>{
+
+    const matchSearch =
+      f.titulo.toLowerCase().includes(search.toLowerCase()) ||
+      f.origem.toLowerCase().includes(search.toLowerCase()) ||
+      f.destino.toLowerCase().includes(search.toLowerCase());
+
+    const matchUrgencia =
+      selectedUrgencia === 'todas' || f.urgencia === selectedUrgencia;
+
+    return matchSearch && matchUrgencia;
+  });
+
   const getUrgenciaStyle = (urgencia: string) => {
     switch (urgencia) {
       case 'alta':
@@ -206,7 +228,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
             </View>
           )}
 
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={()=>{
+              setSelectedFrete(item)
+              setDetailsVisible(true)
+            }}
+          >
             <Text style={styles.actionButtonText}>Ver</Text>
             <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
           </TouchableOpacity>
@@ -217,8 +245,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 
   const handleAddDemanda = () => {
     alert('Abrindo formulário para adicionar nova demanda...');
-    // Aqui você pode navegar para a tela de criação de demanda
-    // router.push('/criar-demanda') ou navigation.navigate('CriarDemanda')
   };
 
   return (
@@ -228,7 +254,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 30 }}
       >
-        {/* Header */}
+
         <View style={styles.headerContainer}>
           <SafeAreaView style={styles.header}>
             <View style={styles.headerTop}>
@@ -250,7 +276,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           </SafeAreaView>
         </View>
 
-        {/* Account Type Selector */}
         <View style={styles.accountSelectorContainer}>
           <Text style={styles.accountSelectorTitle}>Você é:</Text>
           <View style={styles.accountSelectorRow}>
@@ -300,28 +325,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           </View>
         </View>
 
-        {/* Fretes Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {selectedRole === 'motorista' ? '🚚 Fretes Disponíveis' : '📦 Seus Fretes'}
-            </Text>
-            <TouchableOpacity>
-              <Text style={styles.verMais}>Ver tudo</Text>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={18}
-                color="#3B82F6"
-                style={styles.chevron}
-              />
-            </TouchableOpacity>
+        {/* BUSCA */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={18} color="#64748B" />
+            <TextInput
+              placeholder="Buscar frete ou cidade..."
+              value={search}
+              onChangeText={setSearch}
+              style={styles.searchInput}
+            />
           </View>
+        </View>
 
+        <View style={styles.sectionContainer}>
           {isLoading ? (
             <ActivityIndicator size="large" color="#3B82F6" style={{ marginVertical: 20 }} />
           ) : (
             <FlatList
-              data={fretes}
+              data={filteredFretes}
               renderItem={renderFreteCard}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
@@ -330,42 +352,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           )}
         </View>
 
-        {/* Quick Links */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Atalhos Rápidos</Text>
-          <View style={styles.quickLinksGrid}>
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#DBEAFE' }]}>
-                <MaterialCommunityIcons name="chat-multiple" size={22} color="#3B82F6" />
-              </View>
-              <Text style={styles.quickLinkText}>Mensagens</Text>
-            </TouchableOpacity>
+      </ScrollView>
 
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#FEE2E2' }]}>
-                <MaterialCommunityIcons name="history" size={22} color="#DC2626" />
-              </View>
-              <Text style={styles.quickLinkText}>Histórico</Text>
-            </TouchableOpacity>
+      <Modal visible={detailsVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{selectedFrete?.titulo}</Text>
 
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#FCD34D' }]}>
-                <MaterialCommunityIcons name="star" size={22} color="#F59E0B" />
-              </View>
-              <Text style={styles.quickLinkText}>Avaliações</Text>
-            </TouchableOpacity>
+            <Text>Origem: {selectedFrete?.origem}</Text>
+            <Text>Destino: {selectedFrete?.destino}</Text>
+            <Text>Peso: {selectedFrete?.peso}</Text>
+            <Text>Distância: {selectedFrete?.distancia}</Text>
 
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#DCFCE7' }]}>
-                <MaterialCommunityIcons name="cog" size={22} color="#16A34A" />
-              </View>
-              <Text style={styles.quickLinkText}>Configurações</Text>
+            <Text style={styles.modalPrice}>
+              R$ {selectedFrete?.valor.toLocaleString('pt-BR')}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={()=>setDetailsVisible(false)}
+            >
+              <Text style={{color:"#FFF"}}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </Modal>
 
-      {/* Floating Action Button - Apenas para Contratante */}
       {selectedRole === 'contratante' && (
         <TouchableOpacity
           style={styles.fab}
@@ -375,12 +387,68 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           <Ionicons name="add" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       )}
+
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  container:{ flex:1, backgroundColor:'#F8FAFC' },
+
+  searchContainer:{
+    paddingHorizontal:20,
+    marginTop:10
+  },
+
+  searchBox:{
+    flexDirection:"row",
+    alignItems:"center",
+    backgroundColor:"#FFF",
+    padding:12,
+    borderRadius:10
+  },
+
+  searchInput:{
+    marginLeft:10,
+    flex:1
+  },
+
+  modalOverlay:{
+    flex:1,
+    backgroundColor:"rgba(0,0,0,0.4)",
+    justifyContent:"center",
+    alignItems:"center"
+  },
+
+  modalCard:{
+    width:"85%",
+    backgroundColor:"#FFF",
+    padding:20,
+    borderRadius:12
+  },
+
+  modalTitle:{
+    fontSize:18,
+    fontWeight:"700",
+    marginBottom:10
+  },
+
+  modalPrice:{
+    fontSize:20,
+    fontWeight:"700",
+    color:"#3B82F6",
+    marginTop:10
+  },
+
+  closeButton:{
+    marginTop:20,
+    backgroundColor:"#3B82F6",
+    padding:10,
+    borderRadius:8,
+    alignItems:"center"
+  },
+
+ ontainer: {
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
