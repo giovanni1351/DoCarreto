@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -16,7 +17,6 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 
 // Types
 type UserRole = 'motorista' | 'contratante';
-
 interface FreteCard {
   id: string;
   titulo: string;
@@ -37,10 +37,11 @@ interface HomeScreenProps {
 const { width } = Dimensions.get('window');
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ 
+  
   userRole = 'motorista', 
   userName = 'Usuário' 
 }) => {
-
+  const router = useRouter();
   const [fretes, setFretes] = useState<FreteCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>(userRole);
@@ -244,7 +245,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   const handleAddDemanda = () => {
-    alert('Abrindo formulário para adicionar nova demanda...');
+    router.push("/cadastro-demanda");
   };
 
   return (
