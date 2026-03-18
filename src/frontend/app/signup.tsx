@@ -23,28 +23,14 @@ export default function SignUpScreen() {
   const router = useRouter();
 
   const handleSignUp = async () => {
-    // 1. Validar campos obrigatórios
-    if (!nome.trim()) {
-      Alert.alert("Erro", "Preencha o nome");
-      return;
-    }
-    if (!email.trim()) {
-      Alert.alert("Erro", "Preencha o email");
-      return;
-    }
-    if (!password.trim()) {
-      Alert.alert("Erro", "Preencha a senha");
-      return;
-    }
-    if (!telefone.trim()) {
-      Alert.alert("Erro", "Preencha o telefone");
+    if (!nome.trim() || !email.trim() || !password.trim() || !telefone.trim()) {
+      Alert.alert("Erro", "Preencha todos os campos");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // 2. Preparar dados (IGUAL ao schema UserCreate do seu backend)
       const userData = {
         nome: nome,
         email: email,
@@ -52,9 +38,6 @@ export default function SignUpScreen() {
         telefone: telefone,
       };
 
-      console.log("Enviando para API:", userData);
-
-      // 3. Fazer requisição POST
       const response = await fetch(`${API_URL}/user/`, {
         method: "POST",
         headers: {
@@ -63,40 +46,30 @@ export default function SignUpScreen() {
         body: JSON.stringify(userData),
       });
 
-      // 4. Ler resposta
       const data = await response.json();
 
-      console.log("Resposta da API:", response.status, data);
-
-      // 5. Verificar se foi sucesso
       if (!response.ok) {
-        // Erro do servidor
         const errorMessage = data.detail || "Erro ao criar conta";
         Alert.alert("Erro", errorMessage);
         return;
       }
 
-      // 6. Sucesso! Mostrar mensagem e redirecionar
       Alert.alert("Sucesso! 🎉", "Conta criada com sucesso!", [
         {
           text: "OK",
           onPress: () => {
-            // Limpar campos
             setNome("");
             setEmail("");
             setPassword("");
             setTelefone("");
-            // Ir para login
             router.push("/login");
           },
         },
       ]);
     } catch (error) {
-      // Erro de conexão
-      console.error("Erro de conexão:", error);
       Alert.alert(
         "Erro de Conexão",
-        `Não foi possível conectar ao servidor.\nVerifique se a API está rodando em ${API_URL}`
+        "Não foi possível conectar ao servidor."
       );
     } finally {
       setIsLoading(false);
@@ -105,6 +78,12 @@ export default function SignUpScreen() {
 
   const handleBackToLogin = () => {
     router.push("/login");
+  };
+
+  // Função para redirecionar para o cadastro de caminhoneiro
+  const handleGoToTruckerSignUp = () => {
+    // Certifique-se de que o arquivo existe em: app/cadastro-caminhoneiro.js (ou similar)
+    router.push("/cadastro-caminhoneiro");
   };
 
   return (
@@ -173,13 +152,23 @@ export default function SignUpScreen() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={handleBackToLogin}
-          style={styles.backToLoginButton}
-          disabled={isLoading}
-        >
-          <Text style={styles.backToLoginText}>Já tenho uma conta</Text>
-        </TouchableOpacity>
+        <View style={styles.footerLinks}>
+          <TouchableOpacity
+            onPress={handleBackToLogin}
+            style={styles.linkButton}
+            disabled={isLoading}
+          >
+            <Text style={styles.linkText}>Já tenho uma conta</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleGoToTruckerSignUp}
+            style={styles.linkButton}
+            disabled={isLoading}
+          >
+            <Text style={styles.truckerLinkText}>Sou Caminhoneiro (Cadastro Especial)</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );
@@ -192,11 +181,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 40,
   },
-
   container: {
     padding: 25,
   },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -204,32 +191,26 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     marginTop: -20,
   },
-
   icon: {
     marginRight: 10,
   },
-
   title: {
     fontSize: 32,
     fontWeight: "bold",
     color: "white",
-    marginBottom: 10,
     textAlign: "center",
   },
-
   subtitle: {
     color: "#cbd5f5",
     textAlign: "center",
     marginBottom: 40,
   },
-
   input: {
     backgroundColor: "white",
     padding: 14,
     borderRadius: 8,
     marginBottom: 15,
   },
-
   button: {
     backgroundColor: "#3b82f6",
     padding: 15,
@@ -237,26 +218,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 20,
   },
-
   buttonDisabled: {
     opacity: 0.6,
   },
-
   buttonText: {
     color: "white",
     fontWeight: "bold",
     fontSize: 16,
   },
-
-  backToLoginButton: {
+  footerLinks: {
     marginTop: 20,
-    paddingVertical: 12,
     alignItems: "center",
   },
-
-  backToLoginText: {
+  linkButton: {
+    paddingVertical: 10,
+  },
+  linkText: {
     color: "#60a5fa",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  truckerLinkText: {
+    color: "#10b981", // Um verde para destacar o cadastro especial
+    fontWeight: "bold",
+    fontSize: 16,
+    marginTop: 10,
   },
 });
