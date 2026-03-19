@@ -16,7 +16,7 @@ export default function LoginScreen() {
   // };
 
   const handleHome = () => {
-    router.push("/home");
+    router.push("/homeMotorista");
   };
 
   const handleForgotPassword = () => {

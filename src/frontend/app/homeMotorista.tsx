@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -10,13 +9,10 @@ import {
   FlatList,
   Dimensions,
   ActivityIndicator,
-  TextInput,
-  Modal
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Types
-type UserRole = 'motorista' | 'contratante';
 interface FreteCard {
   id: string;
   titulo: string;
@@ -29,136 +25,74 @@ interface FreteCard {
   candidatos?: number;
 }
 
-interface HomeScreenProps {
-  userRole?: UserRole;
+interface MotoristaHomeScreenProps {
   userName?: string;
 }
 
 const { width } = Dimensions.get('window');
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ 
-  
-  userRole = 'motorista', 
+const MotoristaHomeScreen: React.FC<MotoristaHomeScreenProps> = ({ 
   userName = 'Usuário' 
 }) => {
-  const router = useRouter();
   const [fretes, setFretes] = useState<FreteCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<UserRole>(userRole);
-
-  const [search,setSearch] = useState('');
-  const [selectedUrgencia,setSelectedUrgencia] = useState<'todas'|'alta'|'media'|'baixa'>('todas');
-
-  const [selectedFrete,setSelectedFrete] = useState<FreteCard | null>(null);
-  const [detailsVisible,setDetailsVisible] = useState(false);
 
   useEffect(() => {
-    loadInitialData(selectedRole);
-  }, [selectedRole]);
+    loadInitialData();
+  }, []);
 
-  const loadInitialData = (role: UserRole) => {
+  const loadInitialData = () => {
     setIsLoading(true);
 
-    if (role === 'motorista') {
-      setFretes([
-        {
-          id: '1',
-          titulo: 'Frete São Paulo → Rio de Janeiro',
-          origem: 'São Bernardo do Campo, SP',
-          destino: 'Rio de Janeiro, RJ',
-          valor: 1200,
-          peso: '5 toneladas',
-          urgencia: 'media',
-          distancia: '430 km',
-          candidatos: 3,
-        },
-        {
-          id: '2',
-          titulo: 'Frete Campinas → Ribeirão Preto',
-          origem: 'Campinas, SP',
-          destino: 'Ribeirão Preto, SP',
-          valor: 800,
-          peso: '3 toneladas',
-          urgencia: 'alta',
-          distancia: '250 km',
-          candidatos: 5,
-        },
-        {
-          id: '3',
-          titulo: 'Frete Santo André → Sorocaba',
-          origem: 'Santo André, SP',
-          destino: 'Sorocaba, SP',
-          valor: 600,
-          peso: '2 toneladas',
-          urgencia: 'baixa',
-          distancia: '120 km',
-          candidatos: 2,
-        },
-        {
-          id: '4',
-          titulo: 'Frete Sorocaba → Araraquara',
-          origem: 'Sorocaba, SP',
-          destino: 'Araraquara, SP',
-          valor: 950,
-          peso: '4 toneladas',
-          urgencia: 'media',
-          distancia: '280 km',
-          candidatos: 4,
-        },
-      ]);
-    } else {
-      setFretes([
-        {
-          id: '1',
-          titulo: 'Transporte de Maquinário Industrial',
-          origem: 'São Bernardo do Campo, SP',
-          destino: 'Belo Horizonte, MG',
-          valor: 2500,
-          peso: '15 toneladas',
-          urgencia: 'alta',
-          distancia: '580 km',
-          candidatos: 8,
-        },
-        {
-          id: '2',
-          titulo: 'Frete de Peças Automotivas',
-          origem: 'Guarulhos, SP',
-          destino: 'Curitiba, PR',
-          valor: 1500,
-          peso: '8 toneladas',
-          urgencia: 'media',
-          distancia: '420 km',
-          candidatos: 12,
-        },
-        {
-          id: '3',
-          titulo: 'Carga Refrigerada de Alimentos',
-          origem: 'São Paulo, SP',
-          destino: 'Brasília, DF',
-          valor: 3000,
-          peso: '10 toneladas',
-          urgencia: 'alta',
-          distancia: '950 km',
-          candidatos: 15,
-        },
-      ]);
-    }
+    setFretes([
+      {
+        id: '1',
+        titulo: 'Frete São Paulo → Rio de Janeiro',
+        origem: 'São Bernardo do Campo, SP',
+        destino: 'Rio de Janeiro, RJ',
+        valor: 1200,
+        peso: '5 toneladas',
+        urgencia: 'media',
+        distancia: '430 km',
+        candidatos: 3,
+      },
+      {
+        id: '2',
+        titulo: 'Frete Campinas → Ribeirão Preto',
+        origem: 'Campinas, SP',
+        destino: 'Ribeirão Preto, SP',
+        valor: 800,
+        peso: '3 toneladas',
+        urgencia: 'alta',
+        distancia: '250 km',
+        candidatos: 5,
+      },
+      {
+        id: '3',
+        titulo: 'Frete Santo André → Sorocaba',
+        origem: 'Santo André, SP',
+        destino: 'Sorocaba, SP',
+        valor: 600,
+        peso: '2 toneladas',
+        urgencia: 'baixa',
+        distancia: '120 km',
+        candidatos: 2,
+      },
+      {
+        id: '4',
+        titulo: 'Frete Sorocaba → Araraquara',
+        origem: 'Sorocaba, SP',
+        destino: 'Araraquara, SP',
+        valor: 950,
+        peso: '4 toneladas',
+        urgencia: 'media',
+        distancia: '280 km',
+        candidatos: 4,
+      },
+    ]);
 
     setTimeout(() => setIsLoading(false), 600);
   };
-
-  const filteredFretes = fretes.filter((f)=>{
-
-    const matchSearch =
-      f.titulo.toLowerCase().includes(search.toLowerCase()) ||
-      f.origem.toLowerCase().includes(search.toLowerCase()) ||
-      f.destino.toLowerCase().includes(search.toLowerCase());
-
-    const matchUrgencia =
-      selectedUrgencia === 'todas' || f.urgencia === selectedUrgencia;
-
-    return matchSearch && matchUrgencia;
-  });
 
   const getUrgenciaStyle = (urgencia: string) => {
     switch (urgencia) {
@@ -229,23 +163,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
             </View>
           )}
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={()=>{
-              setSelectedFrete(item)
-              setDetailsVisible(true)
-            }}
-          >
-            <Text style={styles.actionButtonText}>Ver</Text>
+          <TouchableOpacity style={styles.actionButton}>
+            <Text style={styles.actionButtonText}>Candidatar</Text>
             <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
-  };
-
-  const handleAddDemanda = () => {
-    router.push("/cadastro-demanda");
   };
 
   return (
@@ -255,16 +179,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 30 }}
       >
-
+        {/* Header */}
         <View style={styles.headerContainer}>
           <SafeAreaView style={styles.header}>
             <View style={styles.headerTop}>
               <View style={styles.greetingSection}>
                 <Text style={styles.greeting}>Olá, {userName}! 👋</Text>
                 <Text style={styles.subGreeting}>
-                  {selectedRole === 'motorista' 
-                    ? 'Encontre fretes próximos a você' 
-                    : 'Publique e acompanhe seus fretes'}
+                  Encontre fretes próximos a você
                 </Text>
               </View>
               <TouchableOpacity style={styles.notificationButton}>
@@ -277,74 +199,47 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           </SafeAreaView>
         </View>
 
-        <View style={styles.accountSelectorContainer}>
-          <Text style={styles.accountSelectorTitle}>Você é:</Text>
-          <View style={styles.accountSelectorRow}>
-            <TouchableOpacity
-              style={[
-                styles.accountButton,
-                selectedRole === 'motorista' && styles.accountButtonActive,
-              ]}
-              onPress={() => setSelectedRole('motorista')}
-            >
-              <MaterialCommunityIcons
-                name="truck"
-                size={20}
-                color={selectedRole === 'motorista' ? '#FFFFFF' : '#64748B'}
-              />
-              <Text
-                style={[
-                  styles.accountButtonText,
-                  selectedRole === 'motorista' && styles.accountButtonTextActive,
-                ]}
-              >
-                Motorista
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.accountButton,
-                selectedRole === 'contratante' && styles.accountButtonActive,
-              ]}
-              onPress={() => setSelectedRole('contratante')}
-            >
-              <MaterialCommunityIcons
-                name="briefcase"
-                size={20}
-                color={selectedRole === 'contratante' ? '#FFFFFF' : '#64748B'}
-              />
-              <Text
-                style={[
-                  styles.accountButtonText,
-                  selectedRole === 'contratante' && styles.accountButtonTextActive,
-                ]}
-              >
-                Contratante
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* BUSCA */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={18} color="#64748B" />
-            <TextInput
-              placeholder="Buscar frete ou cidade..."
-              value={search}
-              onChangeText={setSearch}
-              style={styles.searchInput}
-            />
-          </View>
-        </View>
-
+        {/* Filtros Rápidos */}
         <View style={styles.sectionContainer}>
+          <Text style={styles.filterTitle}>Filtrar por urgência:</Text>
+          <View style={styles.filterRow}>
+            <TouchableOpacity style={[styles.filterChip, styles.filterChipActive]}>
+              <Text style={styles.filterChipTextActive}>Todos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.filterChip}>
+              <Text style={styles.filterChipText}>🔴 Urgente</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.filterChip}>
+              <Text style={styles.filterChipText}>🟡 Normal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.filterChip}>
+              <Text style={styles.filterChipText}>🟢 Flexível</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Fretes Disponíveis */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              🚚 Fretes Disponíveis
+            </Text>
+            <TouchableOpacity>
+              <Text style={styles.verMais}>Ver tudo</Text>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={18}
+                color="#3B82F6"
+                style={styles.chevron}
+              />
+            </TouchableOpacity>
+          </View>
+
           {isLoading ? (
             <ActivityIndicator size="large" color="#3B82F6" style={{ marginVertical: 20 }} />
           ) : (
             <FlatList
-              data={filteredFretes}
+              data={fretes}
               renderItem={renderFreteCard}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
@@ -353,103 +248,46 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           )}
         </View>
 
-      </ScrollView>
+        {/* Quick Links */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Atalhos Rápidos</Text>
+          <View style={styles.quickLinksGrid}>
+            <TouchableOpacity style={styles.quickLinkCard}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: '#DBEAFE' }]}>
+                <MaterialCommunityIcons name="chat-multiple" size={22} color="#3B82F6" />
+              </View>
+              <Text style={styles.quickLinkText}>Mensagens</Text>
+            </TouchableOpacity>
 
-      <Modal visible={detailsVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{selectedFrete?.titulo}</Text>
+            <TouchableOpacity style={styles.quickLinkCard}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: '#FEE2E2' }]}>
+                <MaterialCommunityIcons name="history" size={22} color="#DC2626" />
+              </View>
+              <Text style={styles.quickLinkText}>Histórico</Text>
+            </TouchableOpacity>
 
-            <Text>Origem: {selectedFrete?.origem}</Text>
-            <Text>Destino: {selectedFrete?.destino}</Text>
-            <Text>Peso: {selectedFrete?.peso}</Text>
-            <Text>Distância: {selectedFrete?.distancia}</Text>
+            <TouchableOpacity style={styles.quickLinkCard}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: '#FCD34D' }]}>
+                <MaterialCommunityIcons name="star" size={22} color="#F59E0B" />
+              </View>
+              <Text style={styles.quickLinkText}>Avaliações</Text>
+            </TouchableOpacity>
 
-            <Text style={styles.modalPrice}>
-              R$ {selectedFrete?.valor.toLocaleString('pt-BR')}
-            </Text>
-
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={()=>setDetailsVisible(false)}
-            >
-              <Text style={{color:"#FFF"}}>Fechar</Text>
+            <TouchableOpacity style={styles.quickLinkCard}>
+              <View style={[styles.quickLinkIcon, { backgroundColor: '#DCFCE7' }]}>
+                <MaterialCommunityIcons name="cog" size={22} color="#16A34A" />
+              </View>
+              <Text style={styles.quickLinkText}>Configurações</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-
-      {selectedRole === 'contratante' && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={handleAddDemanda}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      )}
-
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container:{ flex:1, backgroundColor:'#F8FAFC' },
-
-  searchContainer:{
-    paddingHorizontal:20,
-    marginTop:10
-  },
-
-  searchBox:{
-    flexDirection:"row",
-    alignItems:"center",
-    backgroundColor:"#FFF",
-    padding:12,
-    borderRadius:10
-  },
-
-  searchInput:{
-    marginLeft:10,
-    flex:1
-  },
-
-  modalOverlay:{
-    flex:1,
-    backgroundColor:"rgba(0,0,0,0.4)",
-    justifyContent:"center",
-    alignItems:"center"
-  },
-
-  modalCard:{
-    width:"85%",
-    backgroundColor:"#FFF",
-    padding:20,
-    borderRadius:12
-  },
-
-  modalTitle:{
-    fontSize:18,
-    fontWeight:"700",
-    marginBottom:10
-  },
-
-  modalPrice:{
-    fontSize:20,
-    fontWeight:"700",
-    color:"#3B82F6",
-    marginTop:10
-  },
-
-  closeButton:{
-    marginTop:20,
-    backgroundColor:"#3B82F6",
-    padding:10,
-    borderRadius:8,
-    alignItems:"center"
-  },
-
- ontainer: {
+  container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
@@ -505,12 +343,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  accountSelectorContainer: {
+  sectionContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: '#F8FAFC',
+    marginTop: 24,
   },
-  accountSelectorTitle: {
+  filterTitle: {
     fontSize: 13,
     fontWeight: '600',
     color: '#475569',
@@ -518,38 +355,32 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  accountSelectorRow: {
+  filterRow: {
     flexDirection: 'row',
     gap: 10,
+    flexWrap: 'wrap',
   },
-  accountButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
+  filterChip: {
     paddingHorizontal: 14,
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    gap: 8,
   },
-  accountButtonActive: {
+  filterChipActive: {
     backgroundColor: '#3B82F6',
     borderColor: '#3B82F6',
   },
-  accountButtonText: {
-    fontSize: 14,
+  filterChipText: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#64748B',
   },
-  accountButtonTextActive: {
+  filterChipTextActive: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#FFFFFF',
-  },
-  sectionContainer: {
-    paddingHorizontal: 20,
-    marginTop: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -735,22 +566,6 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     textAlign: 'center',
   },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-  },
 });
 
-export default HomeScreen;
+export default MotoristaHomeScreen;
