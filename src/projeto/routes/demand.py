@@ -27,3 +27,25 @@ async def post_demand(
             detail="Erro ao criar demanda",
         ) from e
     return demanda_new
+
+@router.get("/")
+async def get_demand(
+    session: AsyncSessionDep, current_user: Annotated[User, Depends(get_current_user)]
+) -> list[Demand]:
+    return list((await session.exec(select(Demand))).fetchall())
+
+@router.get("/{demand_id}")
+async def get_demand_by_id(
+    demand_id: int,
+    session: AsyncSessionDep,
+    current_user: Annotated[User, Depends(get_current_user)]
+) -> Demand:
+    demand = await session.exec(
+        select(Demand).where(Demand.id == demand_id)
+    )
+
+    if not demand:
+        raise HTTPException(status_code=404, detail="Demand not found")
+
+    return demand
+
