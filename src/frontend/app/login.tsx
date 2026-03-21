@@ -15,12 +15,16 @@ export default function LoginScreen() {
   //   alert("Login: " + email);
   // };
 
-  const handleHome = () => {
+  const handleHomeMotorista = () => {
     router.push("/homeMotorista");
   };
 
+  const handleHomeContratante = () => {
+    router.push("/homeContratante");
+  };
+
   const handleForgotPassword = () => {
-    alert("Redirecionando para recuperação de senha...");
+    router.push("/ressetPassword");
   };
 
   const handleSignUp = () => {
@@ -67,8 +71,12 @@ export default function LoginScreen() {
         <Text style={styles.forgotPassword}>Esqueceu a senha?</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleHome}>
-        <Text style={styles.buttonText}>Entrar</Text>
+      <TouchableOpacity style={styles.button} onPress={handleHomeContratante}>
+        <Text style={styles.buttonText}>Entrar como Contratante</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.button} onPress={handleHomeMotorista}>
+        <Text style={styles.buttonText}>Entrar como Motorista</Text>
       </TouchableOpacity>
 
       <View style={styles.signUpContainer}>
