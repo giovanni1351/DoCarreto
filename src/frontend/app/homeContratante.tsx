@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+
 import {
   View,
   Text,
@@ -11,8 +13,8 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-} from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+} from "react-native";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 // Types
 interface FreteCard {
@@ -22,25 +24,28 @@ interface FreteCard {
   destino: string;
   valor: number;
   peso: string;
-  urgencia: 'baixa' | 'media' | 'alta';
+  urgencia: "baixa" | "media" | "alta";
   distancia: string;
   candidatos?: number;
-  status?: 'ativo' | 'em_progresso' | 'concluido';
+  status?: "ativo" | "em_progresso" | "concluido";
 }
 
 interface ContratanteHomeScreenProps {
   userName?: string;
 }
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
-const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({ 
-  userName = 'Usuário' 
+const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
+  userName = "Usuário",
 }) => {
+  const router = useRouter();
   const [fretes, setFretes] = useState<FreteCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'todos' | 'ativo' | 'em_progresso' | 'concluido'>('todos');
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "todos" | "ativo" | "em_progresso" | "concluido"
+  >("todos");
   const [selectedFrete, setSelectedFrete] = useState<FreteCard | null>(null);
   const [detailsVisible, setDetailsVisible] = useState(false);
 
@@ -53,52 +58,52 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
 
     setFretes([
       {
-        id: '1',
-        titulo: 'Transporte de Maquinário Industrial',
-        origem: 'São Bernardo do Campo, SP',
-        destino: 'Belo Horizonte, MG',
+        id: "1",
+        titulo: "Transporte de Maquinário Industrial",
+        origem: "São Bernardo do Campo, SP",
+        destino: "Belo Horizonte, MG",
         valor: 2500,
-        peso: '15 toneladas',
-        urgencia: 'alta',
-        distancia: '580 km',
+        peso: "15 toneladas",
+        urgencia: "alta",
+        distancia: "580 km",
         candidatos: 8,
-        status: 'ativo',
+        status: "ativo",
       },
       {
-        id: '2',
-        titulo: 'Frete de Peças Automotivas',
-        origem: 'Guarulhos, SP',
-        destino: 'Curitiba, PR',
+        id: "2",
+        titulo: "Frete de Peças Automotivas",
+        origem: "Guarulhos, SP",
+        destino: "Curitiba, PR",
         valor: 1500,
-        peso: '8 toneladas',
-        urgencia: 'media',
-        distancia: '420 km',
+        peso: "8 toneladas",
+        urgencia: "media",
+        distancia: "420 km",
         candidatos: 12,
-        status: 'em_progresso',
+        status: "em_progresso",
       },
       {
-        id: '3',
-        titulo: 'Carga Refrigerada de Alimentos',
-        origem: 'São Paulo, SP',
-        destino: 'Brasília, DF',
+        id: "3",
+        titulo: "Carga Refrigerada de Alimentos",
+        origem: "São Paulo, SP",
+        destino: "Brasília, DF",
         valor: 3000,
-        peso: '10 toneladas',
-        urgencia: 'alta',
-        distancia: '950 km',
+        peso: "10 toneladas",
+        urgencia: "alta",
+        distancia: "950 km",
         candidatos: 15,
-        status: 'ativo',
+        status: "ativo",
       },
       {
-        id: '4',
-        titulo: 'Transporte de Eletrônicos',
-        origem: 'Diadema, SP',
-        destino: 'Porto Alegre, RS',
+        id: "4",
+        titulo: "Transporte de Eletrônicos",
+        origem: "Diadema, SP",
+        destino: "Porto Alegre, RS",
         valor: 2200,
-        peso: '6 toneladas',
-        urgencia: 'media',
-        distancia: '850 km',
+        peso: "6 toneladas",
+        urgencia: "media",
+        distancia: "850 km",
         candidatos: 7,
-        status: 'concluido',
+        status: "concluido",
       },
     ]);
 
@@ -112,40 +117,39 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
       f.origem.toLowerCase().includes(search.toLowerCase()) ||
       f.destino.toLowerCase().includes(search.toLowerCase());
 
-    const matchStatus =
-      statusFilter === 'todos' || f.status === statusFilter;
+    const matchStatus = statusFilter === "todos" || f.status === statusFilter;
 
     return matchSearch && matchStatus;
   });
 
   const getUrgenciaStyle = (urgencia: string) => {
     switch (urgencia) {
-      case 'alta':
-        return { bg: '#FEE2E2', color: '#DC2626', label: '🔴 Urgente' };
-      case 'media':
-        return { bg: '#FEF3C7', color: '#D97706', label: '🟡 Normal' };
-      case 'baixa':
-        return { bg: '#DBEAFE', color: '#2563EB', label: '🟢 Flexível' };
+      case "alta":
+        return { bg: "#FEE2E2", color: "#DC2626", label: "🔴 Urgente" };
+      case "media":
+        return { bg: "#FEF3C7", color: "#D97706", label: "🟡 Normal" };
+      case "baixa":
+        return { bg: "#DBEAFE", color: "#2563EB", label: "🟢 Flexível" };
       default:
-        return { bg: '#F3F4F6', color: '#6B7280', label: 'Normal' };
+        return { bg: "#F3F4F6", color: "#6B7280", label: "Normal" };
     }
   };
 
   const getStatusStyle = (status?: string) => {
     switch (status) {
-      case 'ativo':
-        return { bg: '#DBEAFE', color: '#2563EB', label: '● Ativo' };
-      case 'em_progresso':
-        return { bg: '#FEF3C7', color: '#D97706', label: '● Em Progresso' };
-      case 'concluido':
-        return { bg: '#DCFCE7', color: '#16A34A', label: '✓ Concluído' };
+      case "ativo":
+        return { bg: "#DBEAFE", color: "#2563EB", label: "● Ativo" };
+      case "em_progresso":
+        return { bg: "#FEF3C7", color: "#D97706", label: "● Em Progresso" };
+      case "concluido":
+        return { bg: "#DCFCE7", color: "#16A34A", label: "✓ Concluído" };
       default:
-        return { bg: '#F3F4F6', color: '#6B7280', label: 'Normal' };
+        return { bg: "#F3F4F6", color: "#6B7280", label: "Normal" };
     }
   };
 
   const handleAddDemanda = () => {
-    alert('Abrindo formulário para adicionar nova demanda...');
+    router.push("/cadastro-demanda");
   };
 
   const renderFreteCard = ({ item }: { item: FreteCard }) => {
@@ -167,7 +171,12 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
               <Text style={styles.freteMetaText}>{item.peso}</Text>
             </View>
           </View>
-          <View style={[styles.urgenciaBadge, { backgroundColor: urgenciaStyle.bg }]}>
+          <View
+            style={[
+              styles.urgenciaBadge,
+              { backgroundColor: urgenciaStyle.bg },
+            ]}
+          >
             <Text style={[styles.urgenciaText, { color: urgenciaStyle.color }]}>
               {urgenciaStyle.label}
             </Text>
@@ -195,11 +204,15 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
         <View style={styles.freteFooter}>
           <View style={{ flex: 1 }}>
             <Text style={styles.freteValorLabel}>Valor</Text>
-            <Text style={styles.freteValor}>R$ {item.valor.toLocaleString('pt-BR')}</Text>
+            <Text style={styles.freteValor}>
+              R$ {item.valor.toLocaleString("pt-BR")}
+            </Text>
           </View>
 
           <View style={styles.statusContainer}>
-            <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+            <View
+              style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}
+            >
               <Text style={[styles.statusText, { color: statusStyle.color }]}>
                 {statusStyle.label}
               </Text>
@@ -231,9 +244,9 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
   const getStatsData = () => {
     const stats = {
       total: fretes.length,
-      ativos: fretes.filter(f => f.status === 'ativo').length,
-      emProgresso: fretes.filter(f => f.status === 'em_progresso').length,
-      concluidos: fretes.filter(f => f.status === 'concluido').length,
+      ativos: fretes.filter((f) => f.status === "ativo").length,
+      emProgresso: fretes.filter((f) => f.status === "em_progresso").length,
+      concluidos: fretes.filter((f) => f.status === "concluido").length,
     };
     return stats;
   };
@@ -269,9 +282,13 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
 
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
-          <View style={[styles.statCard, { backgroundColor: '#EFF6FF' }]}>
-            <View style={[styles.statIcon, { backgroundColor: '#DBEAFE' }]}>
-              <MaterialCommunityIcons name="file-document" size={20} color="#3B82F6" />
+          <View style={[styles.statCard, { backgroundColor: "#EFF6FF" }]}>
+            <View style={[styles.statIcon, { backgroundColor: "#DBEAFE" }]}>
+              <MaterialCommunityIcons
+                name="file-document"
+                size={20}
+                color="#3B82F6"
+              />
             </View>
             <View>
               <Text style={styles.statLabel}>Fretes Publicados</Text>
@@ -279,9 +296,13 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
             </View>
           </View>
 
-          <View style={[styles.statCard, { backgroundColor: '#FEF3C7' }]}>
-            <View style={[styles.statIcon, { backgroundColor: '#FCD34D' }]}>
-              <MaterialCommunityIcons name="clock-outline" size={20} color="#D97706" />
+          <View style={[styles.statCard, { backgroundColor: "#FEF3C7" }]}>
+            <View style={[styles.statIcon, { backgroundColor: "#FCD34D" }]}>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={20}
+                color="#D97706"
+              />
             </View>
             <View>
               <Text style={styles.statLabel}>Em Andamento</Text>
@@ -289,9 +310,13 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
             </View>
           </View>
 
-          <View style={[styles.statCard, { backgroundColor: '#DCFCE7' }]}>
-            <View style={[styles.statIcon, { backgroundColor: '#BBFBEE' }]}>
-              <MaterialCommunityIcons name="check-circle" size={20} color="#16A34A" />
+          <View style={[styles.statCard, { backgroundColor: "#DCFCE7" }]}>
+            <View style={[styles.statIcon, { backgroundColor: "#BBFBEE" }]}>
+              <MaterialCommunityIcons
+                name="check-circle"
+                size={20}
+                color="#16A34A"
+              />
             </View>
             <View>
               <Text style={styles.statLabel}>Concluídos</Text>
@@ -319,44 +344,72 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
           <Text style={styles.filterTitle}>Filtrar por status:</Text>
           <View style={styles.filterRow}>
             <TouchableOpacity
-              style={[styles.filterChip, statusFilter === 'todos' && styles.filterChipActive]}
-              onPress={() => setStatusFilter('todos')}
+              style={[
+                styles.filterChip,
+                statusFilter === "todos" && styles.filterChipActive,
+              ]}
+              onPress={() => setStatusFilter("todos")}
             >
               <Text
-                style={statusFilter === 'todos' ? styles.filterChipTextActive : styles.filterChipText}
+                style={
+                  statusFilter === "todos"
+                    ? styles.filterChipTextActive
+                    : styles.filterChipText
+                }
               >
                 Todos
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.filterChip, statusFilter === 'ativo' && styles.filterChipActive]}
-              onPress={() => setStatusFilter('ativo')}
+              style={[
+                styles.filterChip,
+                statusFilter === "ativo" && styles.filterChipActive,
+              ]}
+              onPress={() => setStatusFilter("ativo")}
             >
               <Text
-                style={statusFilter === 'ativo' ? styles.filterChipTextActive : styles.filterChipText}
+                style={
+                  statusFilter === "ativo"
+                    ? styles.filterChipTextActive
+                    : styles.filterChipText
+                }
               >
                 Ativos
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.filterChip, statusFilter === 'em_progresso' && styles.filterChipActive]}
-              onPress={() => setStatusFilter('em_progresso')}
+              style={[
+                styles.filterChip,
+                statusFilter === "em_progresso" && styles.filterChipActive,
+              ]}
+              onPress={() => setStatusFilter("em_progresso")}
             >
               <Text
-                style={statusFilter === 'em_progresso' ? styles.filterChipTextActive : styles.filterChipText}
+                style={
+                  statusFilter === "em_progresso"
+                    ? styles.filterChipTextActive
+                    : styles.filterChipText
+                }
               >
                 Em Progresso
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.filterChip, statusFilter === 'concluido' && styles.filterChipActive]}
-              onPress={() => setStatusFilter('concluido')}
+              style={[
+                styles.filterChip,
+                statusFilter === "concluido" && styles.filterChipActive,
+              ]}
+              onPress={() => setStatusFilter("concluido")}
             >
               <Text
-                style={statusFilter === 'concluido' ? styles.filterChipTextActive : styles.filterChipText}
+                style={
+                  statusFilter === "concluido"
+                    ? styles.filterChipTextActive
+                    : styles.filterChipText
+                }
               >
                 Concluídos
               </Text>
@@ -382,7 +435,11 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
           </View>
 
           {isLoading ? (
-            <ActivityIndicator size="large" color="#3B82F6" style={{ marginVertical: 20 }} />
+            <ActivityIndicator
+              size="large"
+              color="#3B82F6"
+              style={{ marginVertical: 20 }}
+            />
           ) : filteredFretes.length > 0 ? (
             <FlatList
               data={filteredFretes}
@@ -394,7 +451,9 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
           ) : (
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="inbox" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyStateText}>Nenhum frete neste status</Text>
+              <Text style={styles.emptyStateText}>
+                Nenhum frete neste status
+              </Text>
             </View>
           )}
         </View>
@@ -404,28 +463,44 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
           <Text style={styles.sectionTitle}>Atalhos Rápidos</Text>
           <View style={styles.quickLinksGrid}>
             <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#DBEAFE' }]}>
-                <MaterialCommunityIcons name="chat-multiple" size={22} color="#3B82F6" />
+              <View
+                style={[styles.quickLinkIcon, { backgroundColor: "#DBEAFE" }]}
+              >
+                <MaterialCommunityIcons
+                  name="chat-multiple"
+                  size={22}
+                  color="#3B82F6"
+                />
               </View>
               <Text style={styles.quickLinkText}>Mensagens</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#FEE2E2' }]}>
-                <MaterialCommunityIcons name="history" size={22} color="#DC2626" />
+              <View
+                style={[styles.quickLinkIcon, { backgroundColor: "#FEE2E2" }]}
+              >
+                <MaterialCommunityIcons
+                  name="history"
+                  size={22}
+                  color="#DC2626"
+                />
               </View>
               <Text style={styles.quickLinkText}>Histórico</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#FCD34D' }]}>
+              <View
+                style={[styles.quickLinkIcon, { backgroundColor: "#FCD34D" }]}
+              >
                 <MaterialCommunityIcons name="star" size={22} color="#F59E0B" />
               </View>
               <Text style={styles.quickLinkText}>Avaliações</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#DCFCE7' }]}>
+              <View
+                style={[styles.quickLinkIcon, { backgroundColor: "#DCFCE7" }]}
+              >
                 <MaterialCommunityIcons name="cog" size={22} color="#16A34A" />
               </View>
               <Text style={styles.quickLinkText}>Configurações</Text>
@@ -459,31 +534,31 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
                       styles.modalBadge,
                       {
                         backgroundColor:
-                          selectedFrete.urgencia === 'alta'
-                            ? '#FEE2E2'
-                            : selectedFrete.urgencia === 'media'
-                            ? '#FEF3C7'
-                            : '#DBEAFE',
+                          selectedFrete.urgencia === "alta"
+                            ? "#FEE2E2"
+                            : selectedFrete.urgencia === "media"
+                              ? "#FEF3C7"
+                              : "#DBEAFE",
                       },
                     ]}
                   >
                     <Text
                       style={{
                         color:
-                          selectedFrete.urgencia === 'alta'
-                            ? '#DC2626'
-                            : selectedFrete.urgencia === 'media'
-                            ? '#D97706'
-                            : '#2563EB',
-                        fontWeight: '600',
+                          selectedFrete.urgencia === "alta"
+                            ? "#DC2626"
+                            : selectedFrete.urgencia === "media"
+                              ? "#D97706"
+                              : "#2563EB",
+                        fontWeight: "600",
                         fontSize: 12,
                       }}
                     >
-                      {selectedFrete.urgencia === 'alta'
-                        ? '🔴 Urgente'
-                        : selectedFrete.urgencia === 'media'
-                        ? '🟡 Normal'
-                        : '🟢 Flexível'}
+                      {selectedFrete.urgencia === "alta"
+                        ? "🔴 Urgente"
+                        : selectedFrete.urgencia === "media"
+                          ? "🟡 Normal"
+                          : "🟢 Flexível"}
                     </Text>
                   </View>
 
@@ -493,31 +568,31 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
                         styles.modalBadge,
                         {
                           backgroundColor:
-                            selectedFrete.status === 'ativo'
-                              ? '#DBEAFE'
-                              : selectedFrete.status === 'em_progresso'
-                              ? '#FEF3C7'
-                              : '#DCFCE7',
+                            selectedFrete.status === "ativo"
+                              ? "#DBEAFE"
+                              : selectedFrete.status === "em_progresso"
+                                ? "#FEF3C7"
+                                : "#DCFCE7",
                         },
                       ]}
                     >
                       <Text
                         style={{
                           color:
-                            selectedFrete.status === 'ativo'
-                              ? '#2563EB'
-                              : selectedFrete.status === 'em_progresso'
-                              ? '#D97706'
-                              : '#16A34A',
-                          fontWeight: '600',
+                            selectedFrete.status === "ativo"
+                              ? "#2563EB"
+                              : selectedFrete.status === "em_progresso"
+                                ? "#D97706"
+                                : "#16A34A",
+                          fontWeight: "600",
                           fontSize: 12,
                         }}
                       >
-                        {selectedFrete.status === 'ativo'
-                          ? '● Ativo'
-                          : selectedFrete.status === 'em_progresso'
-                          ? '● Em Progresso'
-                          : '✓ Concluído'}
+                        {selectedFrete.status === "ativo"
+                          ? "● Ativo"
+                          : selectedFrete.status === "em_progresso"
+                            ? "● Em Progresso"
+                            : "✓ Concluído"}
                       </Text>
                     </View>
                   )}
@@ -531,7 +606,9 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
                       <Ionicons name="location" size={20} color="#3B82F6" />
                       <View style={{ marginLeft: 12, flex: 1 }}>
                         <Text style={styles.routeLabel}>Origem</Text>
-                        <Text style={styles.routeValue}>{selectedFrete.origem}</Text>
+                        <Text style={styles.routeValue}>
+                          {selectedFrete.origem}
+                        </Text>
                       </View>
                     </View>
 
@@ -541,7 +618,9 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
                       <Ionicons name="location" size={20} color="#0EA5E9" />
                       <View style={{ marginLeft: 12, flex: 1 }}>
                         <Text style={styles.routeLabel}>Destino</Text>
-                        <Text style={styles.routeValue}>{selectedFrete.destino}</Text>
+                        <Text style={styles.routeValue}>
+                          {selectedFrete.destino}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -557,7 +636,9 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
                     </View>
                     <View style={styles.infoItem}>
                       <Text style={styles.infoLabel}>Distância</Text>
-                      <Text style={styles.infoValue}>{selectedFrete.distancia}</Text>
+                      <Text style={styles.infoValue}>
+                        {selectedFrete.distancia}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -568,7 +649,7 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
                     <View>
                       <Text style={styles.modalLabel}>Valor do Frete</Text>
                       <Text style={styles.modalPrice}>
-                        R$ {selectedFrete.valor.toLocaleString('pt-BR')}
+                        R$ {selectedFrete.valor.toLocaleString("pt-BR")}
                       </Text>
                     </View>
                     {selectedFrete.candidatos !== undefined && (
@@ -576,7 +657,9 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
                         <Ionicons name="people" size={20} color="#3B82F6" />
                         <View>
                           <Text style={styles.modalLabel}>Candidatos</Text>
-                          <Text style={styles.candidatosCount}>{selectedFrete.candidatos}</Text>
+                          <Text style={styles.candidatosCount}>
+                            {selectedFrete.candidatos}
+                          </Text>
                         </View>
                       </View>
                     )}
@@ -586,12 +669,20 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
                 {/* Botões de Ação */}
                 <View style={styles.actionButtonsContainer}>
                   <TouchableOpacity style={styles.editButton}>
-                    <MaterialCommunityIcons name="pencil" size={18} color="#3B82F6" />
+                    <MaterialCommunityIcons
+                      name="pencil"
+                      size={18}
+                      color="#3B82F6"
+                    />
                     <Text style={styles.editButtonText}>Editar Frete</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity style={styles.deleteButton}>
-                    <MaterialCommunityIcons name="trash-can-outline" size={18} color="#DC2626" />
+                    <MaterialCommunityIcons
+                      name="trash-can-outline"
+                      size={18}
+                      color="#DC2626"
+                    />
                     <Text style={styles.deleteButtonText}>Cancelar Frete</Text>
                   </TouchableOpacity>
                 </View>
@@ -618,10 +709,10 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   headerContainer: {
-    backgroundColor: '#0F172A',
+    backgroundColor: "#0F172A",
     paddingBottom: 20,
   },
   header: {
@@ -629,48 +720,48 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   greetingSection: {
     flex: 1,
   },
   greeting: {
     fontSize: 26,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
     marginBottom: 6,
   },
   subGreeting: {
     fontSize: 14,
-    color: '#CBD5F5',
-    fontWeight: '500',
+    color: "#CBD5F5",
+    fontWeight: "500",
   },
   notificationButton: {
-    position: 'relative',
+    position: "relative",
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   notificationBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -4,
     right: -4,
-    backgroundColor: '#EF4444',
+    backgroundColor: "#EF4444",
     borderRadius: 10,
     width: 22,
     height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#0F172A',
+    borderColor: "#0F172A",
   },
   badgeText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   statsContainer: {
     paddingHorizontal: 20,
@@ -678,8 +769,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 14,
     borderRadius: 10,
     gap: 12,
@@ -688,19 +779,19 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+    color: "#64748B",
+    fontWeight: "500",
     marginBottom: 2,
   },
   statValue: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
   },
   searchContainer: {
     paddingHorizontal: 20,
@@ -708,20 +799,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   searchInput: {
     marginLeft: 10,
     flex: 1,
     fontSize: 14,
-    color: '#0F172A',
+    color: "#0F172A",
   },
   sectionContainer: {
     paddingHorizontal: 20,
@@ -729,98 +820,98 @@ const styles = StyleSheet.create({
   },
   filterTitle: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: "600",
+    color: "#475569",
     marginBottom: 12,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   filterRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   filterChipActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: "#3B82F6",
+    borderColor: "#3B82F6",
   },
   filterChipText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
+    fontWeight: "600",
+    color: "#64748B",
   },
   filterChipTextActive: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
   },
   verMais: {
     fontSize: 13,
-    color: '#3B82F6',
-    fontWeight: '600',
+    color: "#3B82F6",
+    fontWeight: "600",
   },
   chevron: {
     marginTop: -2,
   },
   freteCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
-    shadowColor: '#000',
+    borderLeftColor: "#3B82F6",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
   },
   freteTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 12,
   },
   freteTitulo: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 6,
     lineHeight: 20,
   },
   freteMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   freteMetaText: {
     fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+    color: "#64748B",
+    fontWeight: "500",
   },
   metaDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: "#CBD5E1",
     marginHorizontal: 4,
   },
   urgenciaBadge: {
@@ -830,7 +921,7 @@ const styles = StyleSheet.create({
   },
   urgenciaText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   freteRoute: {
     marginBottom: 12,
@@ -838,51 +929,51 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   routePoint: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   routeDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#3B82F6',
+    backgroundColor: "#3B82F6",
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: "#FFFFFF",
   },
   routeDotEnd: {
-    backgroundColor: '#0EA5E9',
+    backgroundColor: "#0EA5E9",
   },
   routeConnector: {
     height: 16,
     width: 2,
-    backgroundColor: '#BFDBFE',
+    backgroundColor: "#BFDBFE",
     marginLeft: 4,
   },
   routeText: {
     fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+    color: "#64748B",
+    fontWeight: "500",
     flex: 1,
   },
   freteFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: "#E2E8F0",
     gap: 8,
   },
   freteValorLabel: {
     fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: "#94A3B8",
+    fontWeight: "500",
     marginBottom: 2,
   },
   freteValor: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#3B82F6',
+    fontWeight: "700",
+    color: "#3B82F6",
   },
   statusContainer: {
     flex: 1,
@@ -891,96 +982,96 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   candidatosContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: "#EFF6FF",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   candidatosText: {
     fontSize: 13,
-    color: '#3B82F6',
-    fontWeight: '600',
+    color: "#3B82F6",
+    fontWeight: "600",
   },
   actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: '#3B82F6',
+    backgroundColor: "#3B82F6",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   quickLinksGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   quickLinkCard: {
     width: (width - 60) / 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
     borderTopWidth: 3,
-    borderTopColor: '#F0F4F8',
+    borderTopColor: "#F0F4F8",
   },
   quickLinkIcon: {
     width: 50,
     height: 50,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 12,
   },
   quickLinkText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#0F172A',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#0F172A",
+    textAlign: "center",
   },
   emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 40,
   },
   emptyStateText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: "#94A3B8",
+    fontWeight: "500",
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 30,
     right: 20,
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#3B82F6",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -990,29 +1081,29 @@ const styles = StyleSheet.create({
   // ===== MODAL STYLES =====
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
+    maxHeight: "90%",
     paddingBottom: 20,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: "#E2E8F0",
   },
   modalHeaderTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
   },
   modalBody: {
     paddingHorizontal: 20,
@@ -1020,154 +1111,154 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 16,
   },
   badgesContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
     marginBottom: 20,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   modalSection: {
     marginBottom: 20,
   },
   modalSectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: "600",
+    color: "#475569",
     marginBottom: 12,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   modalBadge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   routeDetail: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   routeDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   routeDetailConnector: {
     height: 20,
     width: 2,
-    backgroundColor: '#BFDBFE',
+    backgroundColor: "#BFDBFE",
     marginLeft: 10,
     marginVertical: 8,
   },
   routeLabel: {
     fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: "#94A3B8",
+    fontWeight: "500",
     marginBottom: 2,
   },
   routeValue: {
     fontSize: 13,
-    color: '#0F172A',
-    fontWeight: '600',
+    color: "#0F172A",
+    fontWeight: "600",
   },
   infoGrid: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   infoItem: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   infoLabel: {
     fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: "#94A3B8",
+    fontWeight: "500",
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 14,
-    color: '#0F172A',
-    fontWeight: '700',
+    color: "#0F172A",
+    fontWeight: "700",
   },
   priceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   modalLabel: {
     fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: "#94A3B8",
+    fontWeight: "500",
     marginBottom: 4,
   },
   modalPrice: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#3B82F6',
+    fontWeight: "700",
+    color: "#3B82F6",
   },
   candidatosInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   candidatosCount: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: "700",
+    color: "#0F172A",
   },
   actionButtonsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 20,
   },
   editButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    borderColor: "#3B82F6",
+    backgroundColor: "#EFF6FF",
   },
   editButtonText: {
-    color: '#3B82F6',
+    color: "#3B82F6",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   deleteButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#DC2626',
-    backgroundColor: '#FEE2E2',
+    borderColor: "#DC2626",
+    backgroundColor: "#FEE2E2",
   },
   deleteButtonText: {
-    color: '#DC2626',
+    color: "#DC2626",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });
 

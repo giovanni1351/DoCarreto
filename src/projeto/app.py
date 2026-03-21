@@ -29,10 +29,10 @@ def custom_openapi() -> dict[str, Any]:
     if app.openapi_schema:
         return app.openapi_schema
     openapi_schema: dict[str, Any] = get_openapi(
-        title="Exata API Example",
+        title="Do Carreto",
         version="0.2.132",
-        summary="Sistema exemplo Exata de api em FastApi ",
-        description="O acesso desta api é restrito para usuarios da exata",
+        summary="Sistema do Carreto",
+        description="O acesso desta api é restrito para desenvolvedores",
         routes=app.routes,
     )
     openapi_schema["info"]["x-logo"] = {

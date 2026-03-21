@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from schemas.candidatura import Candidatura, CandidaturaCreate
 from schemas.user import User, UserTypes
 
-router = APIRouter(prefix="/candidatura", tags=["Demand"])
+router = APIRouter(prefix="/candidatura", tags=["Candidatura"])
 
 
 @router.post("/")
