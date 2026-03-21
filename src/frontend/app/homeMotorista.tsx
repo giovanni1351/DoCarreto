@@ -9,6 +9,8 @@ import {
   FlatList,
   Dimensions,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -36,6 +38,10 @@ const MotoristaHomeScreen: React.FC<MotoristaHomeScreenProps> = ({
 }) => {
   const [fretes, setFretes] = useState<FreteCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selectedUrgencia, setSelectedUrgencia] = useState<'todas' | 'alta' | 'media' | 'baixa'>('todas');
+  const [selectedFrete, setSelectedFrete] = useState<FreteCard | null>(null);
+  const [detailsVisible, setDetailsVisible] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -93,6 +99,19 @@ const MotoristaHomeScreen: React.FC<MotoristaHomeScreenProps> = ({
 
     setTimeout(() => setIsLoading(false), 600);
   };
+
+  // Filtrar fretes por busca e urgência
+  const filteredFretes = fretes.filter((f) => {
+    const matchSearch =
+      f.titulo.toLowerCase().includes(search.toLowerCase()) ||
+      f.origem.toLowerCase().includes(search.toLowerCase()) ||
+      f.destino.toLowerCase().includes(search.toLowerCase());
+
+    const matchUrgencia =
+      selectedUrgencia === 'todas' || f.urgencia === selectedUrgencia;
+
+    return matchSearch && matchUrgencia;
+  });
 
   const getUrgenciaStyle = (urgencia: string) => {
     switch (urgencia) {
@@ -163,8 +182,14 @@ const MotoristaHomeScreen: React.FC<MotoristaHomeScreenProps> = ({
             </View>
           )}
 
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>Candidatar</Text>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              setSelectedFrete(item);
+              setDetailsVisible(true);
+            }}
+          >
+            <Text style={styles.actionButtonText}>Ver</Text>
             <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -199,21 +224,66 @@ const MotoristaHomeScreen: React.FC<MotoristaHomeScreenProps> = ({
           </SafeAreaView>
         </View>
 
-        {/* Filtros Rápidos */}
+        {/* Search Box */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={18} color="#64748B" />
+            <TextInput
+              placeholder="Buscar frete ou cidade..."
+              value={search}
+              onChangeText={setSearch}
+              style={styles.searchInput}
+              placeholderTextColor="#94A3B8"
+            />
+          </View>
+        </View>
+
+        {/* Filtros por Urgência */}
         <View style={styles.sectionContainer}>
           <Text style={styles.filterTitle}>Filtrar por urgência:</Text>
           <View style={styles.filterRow}>
-            <TouchableOpacity style={[styles.filterChip, styles.filterChipActive]}>
-              <Text style={styles.filterChipTextActive}>Todos</Text>
+            <TouchableOpacity
+              style={[styles.filterChip, selectedUrgencia === 'todas' && styles.filterChipActive]}
+              onPress={() => setSelectedUrgencia('todas')}
+            >
+              <Text
+                style={selectedUrgencia === 'todas' ? styles.filterChipTextActive : styles.filterChipText}
+              >
+                Todos
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.filterChip}>
-              <Text style={styles.filterChipText}>🔴 Urgente</Text>
+
+            <TouchableOpacity
+              style={[styles.filterChip, selectedUrgencia === 'alta' && styles.filterChipActive]}
+              onPress={() => setSelectedUrgencia('alta')}
+            >
+              <Text
+                style={selectedUrgencia === 'alta' ? styles.filterChipTextActive : styles.filterChipText}
+              >
+                🔴 Urgente
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.filterChip}>
-              <Text style={styles.filterChipText}>🟡 Normal</Text>
+
+            <TouchableOpacity
+              style={[styles.filterChip, selectedUrgencia === 'media' && styles.filterChipActive]}
+              onPress={() => setSelectedUrgencia('media')}
+            >
+              <Text
+                style={selectedUrgencia === 'media' ? styles.filterChipTextActive : styles.filterChipText}
+              >
+                🟡 Normal
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.filterChip}>
-              <Text style={styles.filterChipText}>🟢 Flexível</Text>
+
+            <TouchableOpacity
+              style={[styles.filterChip, selectedUrgencia === 'baixa' && styles.filterChipActive]}
+              onPress={() => setSelectedUrgencia('baixa')}
+            >
+              <Text
+                style={selectedUrgencia === 'baixa' ? styles.filterChipTextActive : styles.filterChipText}
+              >
+                🟢 Flexível
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -222,7 +292,7 @@ const MotoristaHomeScreen: React.FC<MotoristaHomeScreenProps> = ({
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              🚚 Fretes Disponíveis
+              🚚 Fretes Disponíveis ({filteredFretes.length})
             </Text>
             <TouchableOpacity>
               <Text style={styles.verMais}>Ver tudo</Text>
@@ -237,14 +307,19 @@ const MotoristaHomeScreen: React.FC<MotoristaHomeScreenProps> = ({
 
           {isLoading ? (
             <ActivityIndicator size="large" color="#3B82F6" style={{ marginVertical: 20 }} />
-          ) : (
+          ) : filteredFretes.length > 0 ? (
             <FlatList
-              data={fretes}
+              data={filteredFretes}
               renderItem={renderFreteCard}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
             />
+          ) : (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="inbox" size={48} color="#CBD5E1" />
+              <Text style={styles.emptyStateText}>Nenhum frete encontrado</Text>
+            </View>
           )}
         </View>
 
@@ -282,6 +357,132 @@ const MotoristaHomeScreen: React.FC<MotoristaHomeScreenProps> = ({
           </View>
         </View>
       </ScrollView>
+
+      {/* Modal de Detalhes */}
+      <Modal visible={detailsVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Header do Modal */}
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setDetailsVisible(false)}>
+                <Ionicons name="close" size={28} color="#0F172A" />
+              </TouchableOpacity>
+              <Text style={styles.modalHeaderTitle}>Detalhes do Frete</Text>
+              <View style={{ width: 28 }} />
+            </View>
+
+            {selectedFrete && (
+              <ScrollView style={styles.modalBody}>
+                {/* Título */}
+                <Text style={styles.modalTitle}>{selectedFrete.titulo}</Text>
+
+                {/* Urgência */}
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Urgência</Text>
+                  <View
+                    style={[
+                      styles.modalBadge,
+                      {
+                        backgroundColor:
+                          selectedFrete.urgencia === 'alta'
+                            ? '#FEE2E2'
+                            : selectedFrete.urgencia === 'media'
+                            ? '#FEF3C7'
+                            : '#DBEAFE',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          selectedFrete.urgencia === 'alta'
+                            ? '#DC2626'
+                            : selectedFrete.urgencia === 'media'
+                            ? '#D97706'
+                            : '#2563EB',
+                        fontWeight: '600',
+                      }}
+                    >
+                      {selectedFrete.urgencia === 'alta'
+                        ? '🔴 Urgente'
+                        : selectedFrete.urgencia === 'media'
+                        ? '🟡 Normal'
+                        : '🟢 Flexível'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Rotas */}
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Rota</Text>
+                  <View style={styles.routeDetail}>
+                    <View style={styles.routeDetailItem}>
+                      <Ionicons name="location" size={20} color="#3B82F6" />
+                      <View style={{ marginLeft: 12, flex: 1 }}>
+                        <Text style={styles.routeLabel}>Origem</Text>
+                        <Text style={styles.routeValue}>{selectedFrete.origem}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.routeDetailConnector} />
+
+                    <View style={styles.routeDetailItem}>
+                      <Ionicons name="location" size={20} color="#0EA5E9" />
+                      <View style={{ marginLeft: 12, flex: 1 }}>
+                        <Text style={styles.routeLabel}>Destino</Text>
+                        <Text style={styles.routeValue}>{selectedFrete.destino}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Informações */}
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Informações</Text>
+                  <View style={styles.infoGrid}>
+                    <View style={styles.infoItem}>
+                      <Text style={styles.infoLabel}>Peso</Text>
+                      <Text style={styles.infoValue}>{selectedFrete.peso}</Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                      <Text style={styles.infoLabel}>Distância</Text>
+                      <Text style={styles.infoValue}>{selectedFrete.distancia}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Preço e Candidatos */}
+                <View style={styles.modalSection}>
+                  <View style={styles.priceContainer}>
+                    <View>
+                      <Text style={styles.modalLabel}>Valor do Frete</Text>
+                      <Text style={styles.modalPrice}>
+                        R$ {selectedFrete.valor.toLocaleString('pt-BR')}
+                      </Text>
+                    </View>
+                    {selectedFrete.candidatos !== undefined && (
+                      <View style={styles.candidatosInfo}>
+                        <Ionicons name="people" size={20} color="#3B82F6" />
+                        <View>
+                          <Text style={styles.modalLabel}>Candidatos</Text>
+                          <Text style={styles.candidatosCount}>{selectedFrete.candidatos}</Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Botão Candidatar */}
+                <TouchableOpacity style={styles.candidarButton}>
+                  <Text style={styles.candidarButtonText}>Candidatar-se ao Frete</Text>
+                </TouchableOpacity>
+
+                <View style={{ height: 20 }} />
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -343,9 +544,30 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  searchContainer: {
+    paddingHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 20,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  searchInput: {
+    marginLeft: 10,
+    flex: 1,
+    fontSize: 14,
+    color: '#0F172A',
+  },
   sectionContainer: {
     paddingHorizontal: 20,
-    marginTop: 24,
+    marginTop: 16,
   },
   filterTitle: {
     fontSize: 13,
@@ -492,6 +714,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
+    gap: 8,
   },
   freteValorLabel: {
     fontSize: 11,
@@ -565,6 +788,167 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0F172A',
     textAlign: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+
+  // ===== MODAL STYLES =====
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalBody: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 20,
+  },
+  modalSection: {
+    marginBottom: 20,
+  },
+  modalSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modalBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  routeDetail: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  routeDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  routeDetailConnector: {
+    height: 20,
+    width: 2,
+    backgroundColor: '#BFDBFE',
+    marginLeft: 10,
+    marginVertical: 8,
+  },
+  routeLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  routeValue: {
+    fontSize: 13,
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  infoItem: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '700',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  modalLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  modalPrice: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#3B82F6',
+  },
+  candidatosInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  candidatosCount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  candidarButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  candidarButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

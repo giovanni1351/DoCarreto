@@ -9,6 +9,8 @@ import {
   FlatList,
   Dimensions,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -37,7 +39,10 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
 }) => {
   const [fretes, setFretes] = useState<FreteCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'todos' | 'ativo' | 'em_progresso' | 'concluido'>('todos');
+  const [selectedFrete, setSelectedFrete] = useState<FreteCard | null>(null);
+  const [detailsVisible, setDetailsVisible] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -100,6 +105,19 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
     setTimeout(() => setIsLoading(false), 600);
   };
 
+  // Filtrar fretes por busca e status
+  const filteredFretes = fretes.filter((f) => {
+    const matchSearch =
+      f.titulo.toLowerCase().includes(search.toLowerCase()) ||
+      f.origem.toLowerCase().includes(search.toLowerCase()) ||
+      f.destino.toLowerCase().includes(search.toLowerCase());
+
+    const matchStatus =
+      statusFilter === 'todos' || f.status === statusFilter;
+
+    return matchSearch && matchStatus;
+  });
+
   const getUrgenciaStyle = (urgencia: string) => {
     switch (urgencia) {
       case 'alta':
@@ -116,24 +134,18 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
   const getStatusStyle = (status?: string) => {
     switch (status) {
       case 'ativo':
-        return { bg: '#DBEAFE', color: '#2563EB', label: '● Ativo', icon: 'check-circle' };
+        return { bg: '#DBEAFE', color: '#2563EB', label: '● Ativo' };
       case 'em_progresso':
-        return { bg: '#FEF3C7', color: '#D97706', label: '● Em Progresso', icon: 'sync' };
+        return { bg: '#FEF3C7', color: '#D97706', label: '● Em Progresso' };
       case 'concluido':
-        return { bg: '#DCFCE7', color: '#16A34A', label: '✓ Concluído', icon: 'check-all' };
+        return { bg: '#DCFCE7', color: '#16A34A', label: '✓ Concluído' };
       default:
-        return { bg: '#F3F4F6', color: '#6B7280', label: 'Normal', icon: 'help-circle' };
+        return { bg: '#F3F4F6', color: '#6B7280', label: 'Normal' };
     }
   };
 
-  const filteredFretes = statusFilter === 'todos' 
-    ? fretes 
-    : fretes.filter(frete => frete.status === statusFilter);
-
   const handleAddDemanda = () => {
     alert('Abrindo formulário para adicionar nova demanda...');
-    // Aqui você pode navegar para a tela de criação de demanda
-    // router.push('/criar-demanda') ou navigation.navigate('CriarDemanda')
   };
 
   const renderFreteCard = ({ item }: { item: FreteCard }) => {
@@ -201,7 +213,13 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
             </View>
           )}
 
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              setSelectedFrete(item);
+              setDetailsVisible(true);
+            }}
+          >
             <Text style={styles.actionButtonText}>Detalhes</Text>
             <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
           </TouchableOpacity>
@@ -216,7 +234,6 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
       ativos: fretes.filter(f => f.status === 'ativo').length,
       emProgresso: fretes.filter(f => f.status === 'em_progresso').length,
       concluidos: fretes.filter(f => f.status === 'concluido').length,
-      totalCandidatos: fretes.reduce((sum, f) => sum + (f.candidatos || 0), 0),
     };
     return stats;
   };
@@ -283,39 +300,64 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
           </View>
         </View>
 
+        {/* Search Box */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={18} color="#64748B" />
+            <TextInput
+              placeholder="Buscar frete ou cidade..."
+              value={search}
+              onChangeText={setSearch}
+              style={styles.searchInput}
+              placeholderTextColor="#94A3B8"
+            />
+          </View>
+        </View>
+
         {/* Filtros por Status */}
         <View style={styles.sectionContainer}>
           <Text style={styles.filterTitle}>Filtrar por status:</Text>
           <View style={styles.filterRow}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.filterChip, statusFilter === 'todos' && styles.filterChipActive]}
               onPress={() => setStatusFilter('todos')}
             >
-              <Text style={statusFilter === 'todos' ? styles.filterChipTextActive : styles.filterChipText}>
+              <Text
+                style={statusFilter === 'todos' ? styles.filterChipTextActive : styles.filterChipText}
+              >
                 Todos
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.filterChip, statusFilter === 'ativo' && styles.filterChipActive]}
               onPress={() => setStatusFilter('ativo')}
             >
-              <Text style={statusFilter === 'ativo' ? styles.filterChipTextActive : styles.filterChipText}>
+              <Text
+                style={statusFilter === 'ativo' ? styles.filterChipTextActive : styles.filterChipText}
+              >
                 Ativos
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.filterChip, statusFilter === 'em_progresso' && styles.filterChipActive]}
               onPress={() => setStatusFilter('em_progresso')}
             >
-              <Text style={statusFilter === 'em_progresso' ? styles.filterChipTextActive : styles.filterChipText}>
+              <Text
+                style={statusFilter === 'em_progresso' ? styles.filterChipTextActive : styles.filterChipText}
+              >
                 Em Progresso
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.filterChip, statusFilter === 'concluido' && styles.filterChipActive]}
               onPress={() => setStatusFilter('concluido')}
             >
-              <Text style={statusFilter === 'concluido' ? styles.filterChipTextActive : styles.filterChipText}>
+              <Text
+                style={statusFilter === 'concluido' ? styles.filterChipTextActive : styles.filterChipText}
+              >
                 Concluídos
               </Text>
             </TouchableOpacity>
@@ -326,7 +368,7 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              📦 Seus Fretes
+              📦 Seus Fretes ({filteredFretes.length})
             </Text>
             <TouchableOpacity>
               <Text style={styles.verMais}>Ver tudo</Text>
@@ -341,20 +383,19 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
 
           {isLoading ? (
             <ActivityIndicator size="large" color="#3B82F6" style={{ marginVertical: 20 }} />
-          ) : (
+          ) : filteredFretes.length > 0 ? (
             <FlatList
               data={filteredFretes}
               renderItem={renderFreteCard}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <MaterialCommunityIcons name="inbox" size={48} color="#CBD5E1" />
-                  <Text style={styles.emptyStateText}>Nenhum frete neste status</Text>
-                </View>
-              }
             />
+          ) : (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="inbox" size={48} color="#CBD5E1" />
+              <Text style={styles.emptyStateText}>Nenhum frete neste status</Text>
+            </View>
           )}
         </View>
 
@@ -392,6 +433,175 @@ const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
           </View>
         </View>
       </ScrollView>
+
+      {/* Modal de Detalhes */}
+      <Modal visible={detailsVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Header do Modal */}
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setDetailsVisible(false)}>
+                <Ionicons name="close" size={28} color="#0F172A" />
+              </TouchableOpacity>
+              <Text style={styles.modalHeaderTitle}>Detalhes do Frete</Text>
+              <View style={{ width: 28 }} />
+            </View>
+
+            {selectedFrete && (
+              <ScrollView style={styles.modalBody}>
+                {/* Título */}
+                <Text style={styles.modalTitle}>{selectedFrete.titulo}</Text>
+
+                {/* Status e Urgência */}
+                <View style={styles.badgesContainer}>
+                  <View
+                    style={[
+                      styles.modalBadge,
+                      {
+                        backgroundColor:
+                          selectedFrete.urgencia === 'alta'
+                            ? '#FEE2E2'
+                            : selectedFrete.urgencia === 'media'
+                            ? '#FEF3C7'
+                            : '#DBEAFE',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          selectedFrete.urgencia === 'alta'
+                            ? '#DC2626'
+                            : selectedFrete.urgencia === 'media'
+                            ? '#D97706'
+                            : '#2563EB',
+                        fontWeight: '600',
+                        fontSize: 12,
+                      }}
+                    >
+                      {selectedFrete.urgencia === 'alta'
+                        ? '🔴 Urgente'
+                        : selectedFrete.urgencia === 'media'
+                        ? '🟡 Normal'
+                        : '🟢 Flexível'}
+                    </Text>
+                  </View>
+
+                  {selectedFrete.status && (
+                    <View
+                      style={[
+                        styles.modalBadge,
+                        {
+                          backgroundColor:
+                            selectedFrete.status === 'ativo'
+                              ? '#DBEAFE'
+                              : selectedFrete.status === 'em_progresso'
+                              ? '#FEF3C7'
+                              : '#DCFCE7',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color:
+                            selectedFrete.status === 'ativo'
+                              ? '#2563EB'
+                              : selectedFrete.status === 'em_progresso'
+                              ? '#D97706'
+                              : '#16A34A',
+                          fontWeight: '600',
+                          fontSize: 12,
+                        }}
+                      >
+                        {selectedFrete.status === 'ativo'
+                          ? '● Ativo'
+                          : selectedFrete.status === 'em_progresso'
+                          ? '● Em Progresso'
+                          : '✓ Concluído'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Rotas */}
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Rota</Text>
+                  <View style={styles.routeDetail}>
+                    <View style={styles.routeDetailItem}>
+                      <Ionicons name="location" size={20} color="#3B82F6" />
+                      <View style={{ marginLeft: 12, flex: 1 }}>
+                        <Text style={styles.routeLabel}>Origem</Text>
+                        <Text style={styles.routeValue}>{selectedFrete.origem}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.routeDetailConnector} />
+
+                    <View style={styles.routeDetailItem}>
+                      <Ionicons name="location" size={20} color="#0EA5E9" />
+                      <View style={{ marginLeft: 12, flex: 1 }}>
+                        <Text style={styles.routeLabel}>Destino</Text>
+                        <Text style={styles.routeValue}>{selectedFrete.destino}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Informações */}
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Informações</Text>
+                  <View style={styles.infoGrid}>
+                    <View style={styles.infoItem}>
+                      <Text style={styles.infoLabel}>Peso</Text>
+                      <Text style={styles.infoValue}>{selectedFrete.peso}</Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                      <Text style={styles.infoLabel}>Distância</Text>
+                      <Text style={styles.infoValue}>{selectedFrete.distancia}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Preço e Candidatos */}
+                <View style={styles.modalSection}>
+                  <View style={styles.priceContainer}>
+                    <View>
+                      <Text style={styles.modalLabel}>Valor do Frete</Text>
+                      <Text style={styles.modalPrice}>
+                        R$ {selectedFrete.valor.toLocaleString('pt-BR')}
+                      </Text>
+                    </View>
+                    {selectedFrete.candidatos !== undefined && (
+                      <View style={styles.candidatosInfo}>
+                        <Ionicons name="people" size={20} color="#3B82F6" />
+                        <View>
+                          <Text style={styles.modalLabel}>Candidatos</Text>
+                          <Text style={styles.candidatosCount}>{selectedFrete.candidatos}</Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Botões de Ação */}
+                <View style={styles.actionButtonsContainer}>
+                  <TouchableOpacity style={styles.editButton}>
+                    <MaterialCommunityIcons name="pencil" size={18} color="#3B82F6" />
+                    <Text style={styles.editButtonText}>Editar Frete</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.deleteButton}>
+                    <MaterialCommunityIcons name="trash-can-outline" size={18} color="#DC2626" />
+                    <Text style={styles.deleteButtonText}>Cancelar Frete</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{ height: 20 }} />
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Floating Action Button */}
       <TouchableOpacity
@@ -492,9 +702,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
+  searchContainer: {
+    paddingHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 20,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  searchInput: {
+    marginLeft: 10,
+    flex: 1,
+    fontSize: 14,
+    color: '#0F172A',
+  },
   sectionContainer: {
     paddingHorizontal: 20,
-    marginTop: 24,
+    marginTop: 16,
   },
   filterTitle: {
     fontSize: 13,
@@ -640,7 +871,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    gap: 10,
+    gap: 8,
   },
   freteValorLabel: {
     fontSize: 11,
@@ -728,6 +959,17 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     textAlign: 'center',
   },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
   fab: {
     position: 'absolute',
     bottom: 30,
@@ -744,16 +986,188 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
+
+  // ===== MODAL STYLES =====
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  emptyStateText: {
-    marginTop: 12,
+  modalContent: {
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalBody: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 16,
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+  },
+  modalSection: {
+    marginBottom: 20,
+  },
+  modalSectionTitle: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modalBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  routeDetail: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  routeDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  routeDetailConnector: {
+    height: 20,
+    width: 2,
+    backgroundColor: '#BFDBFE',
+    marginLeft: 10,
+    marginVertical: 8,
+  },
+  routeLabel: {
+    fontSize: 12,
     color: '#94A3B8',
     fontWeight: '500',
+    marginBottom: 2,
+  },
+  routeValue: {
+    fontSize: 13,
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  infoItem: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '700',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  modalLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  modalPrice: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#3B82F6',
+  },
+  candidatosInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  candidatosCount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+  },
+  editButtonText: {
+    color: '#3B82F6',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  deleteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#DC2626',
+    backgroundColor: '#FEE2E2',
+  },
+  deleteButtonText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 
