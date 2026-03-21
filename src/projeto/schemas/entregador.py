@@ -30,6 +30,3 @@ class EntregadorPublic(BaseModel):
     capacidade_kg: float | None
     total_entregas: int = 0
     avaliacao_media: float = 0
-
-
-EntregadorPublic.model_rebuild()

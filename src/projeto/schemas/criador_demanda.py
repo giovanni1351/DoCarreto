@@ -18,6 +18,3 @@ class CriadorDemanda(SQLModel, table=True):
 class CriadorDemandaPublic(BaseModel):
     avaliacao_media: float = 0
     total_demandas: int = 0
-
-
-CriadorDemandaPublic.model_rebuild()
