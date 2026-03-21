@@ -1,5 +1,5 @@
 [project]
-name = "fastapitemplate"
+name = "DoCarreto"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -95,3 +95,5 @@ ignore = ["T201", "COM812"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
+
+

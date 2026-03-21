@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
+from pydantic import field_validator
 from sqlmodel import Field, SQLModel  # pyright: ignore[reportUnknownVariableType]
 
 """
@@ -46,6 +47,13 @@ class DemandCreate(SQLModel):
     peso_carga_kg: float
     status: DemandStatus = DemandStatus.ABERTA
     data_coleta: datetime | None = None
+
+    @field_validator("data_coleta")
+    @classmethod
+    def preparar_data_coleta(cls, v: datetime) -> datetime | None:
+        # Se o usuário não enviou a data, geramos a data atual sem fuso
+
+        return v.replace(tzinfo=None) if v else None
 
 
 class Demand(DemandCreate, table=True):

@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from pwdlib import PasswordHash
 from schemas.token import TokenData
-from schemas.user import User
+from schemas.user import User, UserTypes
 from settings import LOGGER, SETTINGS
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -59,6 +59,22 @@ async def get_current_admin(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not admin"
         )
     return current_user
+
+
+class UserByRole:
+    def __init__(self, roles: list[UserTypes]) -> None:
+        self.roles: list[UserTypes] = roles
+
+    def __call__(self, user: Annotated[User, Depends(get_current_user)]) -> User:
+        if user.is_admin:
+            return user
+        if user.tipo_user in self.roles:
+            return user
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Você não tem acesso a este recurso",
+        )
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
