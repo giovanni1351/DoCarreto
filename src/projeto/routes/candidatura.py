@@ -15,6 +15,9 @@ async def criar_cadidatura(
     session: AsyncSessionDep,
     user: Annotated[User, Depends(UserByRole([UserTypes.ENTREGADOR]))],
 ) -> Candidatura:
+    """
+    Candidatura, apenas os entregadores podem se candidatar
+    """
     candidatura_to_create = Candidatura(
         **candidatura.model_dump(), entregador_id=user.id
     )
