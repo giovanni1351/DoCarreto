@@ -21,9 +21,11 @@ async def criar_criador_demanda(
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
             detail="Usuario ja cadastrado como entregador",
         )
-
+    current_user.tipo_user = UserTypes.CRIADOR_DEMANDA
     criador = CriadorDemanda(id=current_user.id)
     session.add(criador)
+    session.add(current_user)
+
     await session.commit()
     await session.refresh(criador)
     return criador
@@ -38,3 +40,29 @@ async def pegar_minhas_demandas(
         await session.exec(select(Demand).where(col(Demand.user_id) == current_user.id))
     ).all()
     return list(demands)
+
+
+@router.delete("/")
+async def deletar_conta_criador(
+    session: AsyncSessionDep,
+    current_user: Annotated[
+        User,
+        Depends(UserByRole(roles=[UserTypes.CRIADOR_DEMANDA, UserTypes.NAO_DEFINIDO])),
+    ],
+) -> CriadorDemanda:
+    criador_profile = (
+        await session.exec(
+            select(CriadorDemanda).where(col(CriadorDemanda.id) == current_user.id)
+        )
+    ).first()
+    if criador_profile:
+        await session.delete(criador_profile)
+
+    current_user.tipo_user = UserTypes.NAO_DEFINIDO
+    session.add(current_user)
+    await session.commit()
+    if not criador_profile:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE, detail="Entregador ja deletado"
+        )
+    return criador_profile
