@@ -19,7 +19,16 @@ async def post_demand(
     current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
 ) -> Demand:
     demanda_new = Demand(**demanda.model_dump(), user_id=current_user.id)
+    # criador = (
+    #     await session.exec(
+    #         select(CriadorDemanda).where(col(CriadorDemanda.id) == current_user.id)
+    #     )
+    # ).first()
     try:
+        # if criador:
+        #     criador.total_demandas += 1
+        #     session.add(criador)
+        current_user.criador_demanda.total_demandas += 1
         session.add(demanda_new)
         await session.commit()
         await session.refresh(demanda_new)

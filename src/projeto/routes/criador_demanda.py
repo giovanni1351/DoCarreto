@@ -4,7 +4,9 @@ from auth import UserByRole
 from database import AsyncSessionDep
 from fastapi import APIRouter, Depends, HTTPException, status
 from schemas.criador_demanda import CriadorDemanda
+from schemas.demand import Demand
 from schemas.user import User, UserTypes
+from sqlmodel import col, select
 
 router = APIRouter(prefix="/criador-demanda", tags=["Criador de Demanda"])
 
@@ -25,3 +27,14 @@ async def criar_criador_demanda(
     await session.commit()
     await session.refresh(criador)
     return criador
+
+
+@router.get("/demandas")
+async def pegar_minhas_demandas(
+    session: AsyncSessionDep,
+    current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
+) -> list[Demand]:
+    demands = (
+        await session.exec(select(Demand).where(col(Demand.user_id) == current_user.id))
+    ).all()
+    return list(demands)

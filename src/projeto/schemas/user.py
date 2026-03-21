@@ -33,8 +33,12 @@ class User(UserCreate, table=True):
     is_admin: bool = Field(default=False)
     tipo_user: "UserTypes" = UserTypes.NAO_DEFINIDO
 
-    criador_demanda: Optional["CriadorDemanda"] = Relationship(back_populates="user")
-    entregador: Optional["Entregador"] = Relationship(back_populates="user")
+    criador_demanda: Optional["CriadorDemanda"] = Relationship(
+        back_populates="user", sa_relationship_kwargs={"lazy": "selectin"}
+    )
+    entregador: Optional["Entregador"] = Relationship(
+        back_populates="user", sa_relationship_kwargs={"lazy": "selectin"}
+    )
 
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime | None = Field(default=None)
