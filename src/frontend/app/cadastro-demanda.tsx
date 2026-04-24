@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
+import { ApiError, createDemand } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 // ─── Componente de Mapa (apenas Web) ───────────────────────────────────────
 function LeafletMapPicker({ visible, onClose, onConfirm, initialAddress, title = "Selecionar Endereço" }) {
@@ -228,7 +230,7 @@ function LeafletMapPicker({ visible, onClose, onConfirm, initialAddress, title =
       });
       setPendingConfirm(null);
     }
-  }, [pendingConfirm]);
+  }, [onConfirm, pendingConfirm]);
 
   if (!visible) return null;
 
@@ -275,14 +277,12 @@ const mapStyles = StyleSheet.create({
   modalTitle: { fontSize: 17, fontWeight: "700", color: "#0F172A", flex: 1 },
 });
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
-
 // ─── Tela Principal ─────────────────────────────────────────────────────────
 export default function CreateDemandScreen() {
   const router = useRouter();
+  const { token, ensureCriador } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  // "origem" | "destino" | null
-  const [mapTarget, setMapTarget] = useState(null);
+  const [mapTarget, setMapTarget] = useState<"origem" | "destino" | null>(null);
 
   const [form, setForm] = useState({
     titulo: "",
@@ -301,6 +301,18 @@ export default function CreateDemandScreen() {
 
   const updateField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCoordinateChange = (
+    field: "latitude_origem" | "longitude_origem" | "latitude_destino" | "longitude_destino",
+    value: string
+  ) => {
+    const parsed = parseFloat(value.replace(",", "."));
+    if (Number.isNaN(parsed)) {
+      updateField(field, null);
+      return;
+    }
+    updateField(field, parsed);
   };
 
   const handleDateChange = (text) => {
@@ -359,9 +371,17 @@ export default function CreateDemandScreen() {
 
   // ── Envio para a API ───────────────────────────────────────────────────────
   const handleSubmit = async () => {
+    console.info("[Demanda] Iniciando publicação");
     const error = validate();
     if (error) {
+      console.warn("[Demanda] Validação falhou", error);
       Alert.alert("Campos inválidos", error);
+      return;
+    }
+
+    if (!token) {
+      Alert.alert("Sessão expirada", "Faça login novamente.");
+      router.replace("/login");
       return;
     }
 
@@ -382,26 +402,21 @@ export default function CreateDemandScreen() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/demands/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        const detail = errData?.detail ?? `Erro ${response.status}`;
-        Alert.alert("Erro ao publicar", detail);
-        return;
-      }
+      await ensureCriador();
+      console.info("[Demanda] Perfil criador garantido");
+      await createDemand(token, payload);
+      console.info("[Demanda] Publicação concluída");
 
       Alert.alert("Sucesso!", "Frete publicado com sucesso.", [
-        { text: "OK", onPress: () => router.back() },
+        { text: "OK", onPress: () => router.replace("/homeContratante") },
       ]);
     } catch (e) {
-      Alert.alert("Erro de conexão", "Não foi possível conectar à API. Verifique sua conexão.");
+      console.error("[Demanda] Erro ao publicar", e);
+      if (e instanceof ApiError) {
+        Alert.alert("Erro ao publicar", e.message);
+      } else {
+        Alert.alert("Erro de conexão", "Não foi possível conectar à API. Verifique sua conexão.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -416,7 +431,7 @@ export default function CreateDemandScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.replace("/homeContratante")}
             style={styles.backIconButton}
           >
             <Ionicons name="arrow-back" size={24} color="#0F172A" />
@@ -465,30 +480,61 @@ export default function CreateDemandScreen() {
           {/* ── Seção de Logística ── */}
           <Text style={styles.sectionTitle}>Logística</Text>
 
-          {/* Endereço de Origem com mapa */}
           <Text style={styles.labelSmall}>Endereço de Origem</Text>
-          <TouchableOpacity
-            style={styles.mapPickerButton}
-            onPress={() => setMapTarget("origem")}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="location-outline"
-              size={20}
-              color={form.endereco_origem ? "#3B82F6" : "#94A3B8"}
-              style={{ marginRight: 10 }}
-            />
-            <Text
-              style={[
-                styles.mapPickerText,
-                form.endereco_origem && styles.mapPickerTextFilled,
-              ]}
-              numberOfLines={2}
+          {Platform.OS === "web" ? (
+            <TouchableOpacity
+              style={styles.mapPickerButton}
+              onPress={() => setMapTarget("origem")}
+              activeOpacity={0.7}
             >
-              {form.endereco_origem || "Toque para selecionar no mapa"}
-            </Text>
-            <Ionicons name="map-outline" size={18} color="#3B82F6" />
-          </TouchableOpacity>
+              <Ionicons
+                name="location-outline"
+                size={20}
+                color={form.endereco_origem ? "#3B82F6" : "#94A3B8"}
+                style={{ marginRight: 10 }}
+              />
+              <Text
+                style={[
+                  styles.mapPickerText,
+                  form.endereco_origem && styles.mapPickerTextFilled,
+                ]}
+                numberOfLines={2}
+              >
+                {form.endereco_origem || "Toque para selecionar no mapa"}
+              </Text>
+              <Ionicons name="map-outline" size={18} color="#3B82F6" />
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: São Paulo, SP"
+                placeholderTextColor="#94A3B8"
+                value={form.endereco_origem}
+                onChangeText={(v) => updateField("endereco_origem", v)}
+              />
+              <View style={styles.row}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={styles.labelSmall}>Latitude origem</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="-23.550520"
+                    keyboardType="numeric"
+                    onChangeText={(v) => handleCoordinateChange("latitude_origem", v)}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={styles.labelSmall}>Longitude origem</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="-46.633308"
+                    keyboardType="numeric"
+                    onChangeText={(v) => handleCoordinateChange("longitude_origem", v)}
+                  />
+                </View>
+              </View>
+            </>
+          )}
 
           {/* Coordenadas (somente leitura, exibidas após seleção) */}
           {form.latitude_origem !== null && (
@@ -509,28 +555,60 @@ export default function CreateDemandScreen() {
           )}
 
           <Text style={styles.labelSmall}>Endereço de Destino</Text>
-          <TouchableOpacity
-            style={styles.mapPickerButton}
-            onPress={() => setMapTarget("destino")}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="navigate-outline"
-              size={20}
-              color={form.endereco_destino ? "#F97316" : "#94A3B8"}
-              style={{ marginRight: 10 }}
-            />
-            <Text
-              style={[
-                styles.mapPickerText,
-                form.endereco_destino && styles.mapPickerTextFilled,
-              ]}
-              numberOfLines={2}
+          {Platform.OS === "web" ? (
+            <TouchableOpacity
+              style={styles.mapPickerButton}
+              onPress={() => setMapTarget("destino")}
+              activeOpacity={0.7}
             >
-              {form.endereco_destino || "Toque para selecionar no mapa"}
-            </Text>
-            <Ionicons name="map-outline" size={18} color="#F97316" />
-          </TouchableOpacity>
+              <Ionicons
+                name="navigate-outline"
+                size={20}
+                color={form.endereco_destino ? "#F97316" : "#94A3B8"}
+                style={{ marginRight: 10 }}
+              />
+              <Text
+                style={[
+                  styles.mapPickerText,
+                  form.endereco_destino && styles.mapPickerTextFilled,
+                ]}
+                numberOfLines={2}
+              >
+                {form.endereco_destino || "Toque para selecionar no mapa"}
+              </Text>
+              <Ionicons name="map-outline" size={18} color="#F97316" />
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: Campinas, SP"
+                placeholderTextColor="#94A3B8"
+                value={form.endereco_destino}
+                onChangeText={(v) => updateField("endereco_destino", v)}
+              />
+              <View style={styles.row}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={styles.labelSmall}>Latitude destino</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="-22.905560"
+                    keyboardType="numeric"
+                    onChangeText={(v) => handleCoordinateChange("latitude_destino", v)}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={styles.labelSmall}>Longitude destino</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="-47.060830"
+                    keyboardType="numeric"
+                    onChangeText={(v) => handleCoordinateChange("longitude_destino", v)}
+                  />
+                </View>
+              </View>
+            </>
+          )}
 
           {form.latitude_destino !== null && (
             <View style={styles.coordRow}>

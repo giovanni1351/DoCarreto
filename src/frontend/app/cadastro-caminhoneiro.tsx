@@ -11,22 +11,28 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-
-const API_URL = "http://127.0.0.1:8000";
+import { ApiError, becomeEntregador } from "@/lib/api";
+import { routeByUserType, useAuth } from "@/lib/auth";
 
 export default function TruckerSignUpScreen() {
-  const [email, setEmail] = useState("");
   const [cnh, setCnh] = useState("");
   const [tipoVeiculo, setTipoVeiculo] = useState("");
   const [placaVeiculo, setPlacaVeiculo] = useState("");
   const [capacidadeKg, setCapacidadeKg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { token, refreshProfile } = useAuth();
 
   const handleSignUp = async () => {
     // Validação básica
-    if (!email.trim() || !cnh.trim() || !tipoVeiculo.trim() || !placaVeiculo.trim() || !capacidadeKg.trim()) {
+    if (!cnh.trim() || !tipoVeiculo.trim() || !placaVeiculo.trim() || !capacidadeKg.trim()) {
       Alert.alert("Erro", "Por favor, preencha todos os campos.");
+      return;
+    }
+
+    if (!token) {
+      Alert.alert("Sessão expirada", "Faça login novamente.");
+      router.replace("/login");
       return;
     }
 
@@ -34,37 +40,34 @@ export default function TruckerSignUpScreen() {
 
     try {
       const truckerData = {
-        email: email,
         cnh: cnh,
         tipo_veiculo: tipoVeiculo,
         placa_veiculo: placaVeiculo,
         capacidade_kg: parseFloat(capacidadeKg.replace(',', '.')),
       };
 
-      // Tenho que confirmar sobre essa API.
-      const response = await fetch(`${API_URL}/caminhoneiro/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(truckerData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Erro ao cadastrar caminhoneiro");
-      }
+      await becomeEntregador(token, truckerData);
+      const profile = await refreshProfile();
 
       Alert.alert("Sucesso! 🚛", "Cadastro de caminhoneiro realizado!", [
-        { text: "OK", onPress: () => router.push("/login") }
+        {
+          text: "OK",
+          onPress: () => {
+            if (profile) {
+              router.replace(routeByUserType(profile.tipo_user));
+            } else {
+              router.replace("/homeMotorista");
+            }
+          },
+        }
       ]);
       
     } catch (error) {
-      Alert.alert(
-        "Erro de Conexão",
-        "Não foi possível conectar ao servidor."
-      );
+      if (error instanceof ApiError) {
+        Alert.alert("Erro", error.message);
+      } else {
+        Alert.alert("Erro de Conexão", "Não foi possível conectar ao servidor.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -84,16 +87,6 @@ export default function TruckerSignUpScreen() {
         </View>
 
         <Text style={styles.subtitle}>Dados profissionais do motorista</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email associado à conta"
-          placeholderTextColor="#888"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          editable={!isLoading}
-        />
 
         <TextInput
           style={styles.input}
@@ -146,7 +139,7 @@ export default function TruckerSignUpScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.replace("/escolher-perfil")}
           style={styles.backButton}
         >
           <Text style={styles.backButtonText}>Voltar</Text>

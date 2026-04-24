@@ -1,955 +1,349 @@
-import React, { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  FlatList,
-  Dimensions,
   ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
   TextInput,
-  Modal,
-} from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-// Types
-interface FreteCard {
-  id: string;
-  titulo: string;
-  origem: string;
-  destino: string;
-  valor: number;
-  peso: string;
-  urgencia: 'baixa' | 'media' | 'alta';
-  distancia: string;
-  candidatos?: number;
-}
+import {
+  ApiError,
+  createCandidatura,
+  listDemands,
+  type Demand,
+  type DemandStatus,
+} from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
-interface MotoristaHomeScreenProps {
-  userName?: string;
-}
+export default function MotoristaHomeScreen() {
+  const router = useRouter();
+  const { token, user, isLoading: authLoading, signOut } = useAuth();
 
-const { width } = Dimensions.get('window');
+  const [demands, setDemands] = useState<Demand[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"todos" | DemandStatus>("todos");
 
-const MotoristaHomeScreen: React.FC<MotoristaHomeScreenProps> = ({ 
-  userName = 'Usuário' 
-}) => {
-  const [fretes, setFretes] = useState<FreteCard[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [selectedUrgencia, setSelectedUrgencia] = useState<'todas' | 'alta' | 'media' | 'baixa'>('todas');
-  const [selectedFrete, setSelectedFrete] = useState<FreteCard | null>(null);
-  const [detailsVisible, setDetailsVisible] = useState(false);
+  // Aguarda auth carregar e verifica permissão
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    if (user?.tipo_user !== "ENTREGADOR") {
+      router.replace("/escolher-perfil");
+      return;
+    }
+  }, [authLoading, token, user, router]);
+
+  const loadDemands = useCallback(async () => {
+    if (!token) return;
+    const data = await listDemands(token);
+    setDemands(data);
+  }, [token]);
 
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    if (authLoading || !token || user?.tipo_user !== "ENTREGADOR") return;
 
-  const loadInitialData = () => {
-    setIsLoading(true);
+    let cancelled = false;
+    const bootstrap = async () => {
+      try {
+        await loadDemands();
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof ApiError ? error.message : "Erro ao carregar fretes.";
+        Alert.alert("Erro", message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
-    setFretes([
-      {
-        id: '1',
-        titulo: 'Frete São Paulo → Rio de Janeiro',
-        origem: 'São Bernardo do Campo, SP',
-        destino: 'Rio de Janeiro, RJ',
-        valor: 1200,
-        peso: '5 toneladas',
-        urgencia: 'media',
-        distancia: '430 km',
-        candidatos: 3,
-      },
-      {
-        id: '2',
-        titulo: 'Frete Campinas → Ribeirão Preto',
-        origem: 'Campinas, SP',
-        destino: 'Ribeirão Preto, SP',
-        valor: 800,
-        peso: '3 toneladas',
-        urgencia: 'alta',
-        distancia: '250 km',
-        candidatos: 5,
-      },
-      {
-        id: '3',
-        titulo: 'Frete Santo André → Sorocaba',
-        origem: 'Santo André, SP',
-        destino: 'Sorocaba, SP',
-        valor: 600,
-        peso: '2 toneladas',
-        urgencia: 'baixa',
-        distancia: '120 km',
-        candidatos: 2,
-      },
-      {
-        id: '4',
-        titulo: 'Frete Sorocaba → Araraquara',
-        origem: 'Sorocaba, SP',
-        destino: 'Araraquara, SP',
-        valor: 950,
-        peso: '4 toneladas',
-        urgencia: 'media',
-        distancia: '280 km',
-        candidatos: 4,
-      },
-    ]);
+    bootstrap();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, token, user, loadDemands]);
 
-    setTimeout(() => setIsLoading(false), 600);
-  };
+  useFocusEffect(
+    useCallback(() => {
+      if (!token || user?.tipo_user !== "ENTREGADOR") return;
+      loadDemands().catch(() => undefined);
+    }, [loadDemands, token, user])
+  );
 
-  // Filtrar fretes por busca e urgência
-  const filteredFretes = fretes.filter((f) => {
-    const matchSearch =
-      f.titulo.toLowerCase().includes(search.toLowerCase()) ||
-      f.origem.toLowerCase().includes(search.toLowerCase()) ||
-      f.destino.toLowerCase().includes(search.toLowerCase());
-
-    const matchUrgencia =
-      selectedUrgencia === 'todas' || f.urgencia === selectedUrgencia;
-
-    return matchSearch && matchUrgencia;
-  });
-
-  const getUrgenciaStyle = (urgencia: string) => {
-    switch (urgencia) {
-      case 'alta':
-        return { bg: '#FEE2E2', color: '#DC2626', label: '🔴 Urgente' };
-      case 'media':
-        return { bg: '#FEF3C7', color: '#D97706', label: '🟡 Normal' };
-      case 'baixa':
-        return { bg: '#DBEAFE', color: '#2563EB', label: '🟢 Flexível' };
-      default:
-        return { bg: '#F3F4F6', color: '#6B7280', label: 'Normal' };
+  const onRefresh = async () => {
+    if (!token) return;
+    setRefreshing(true);
+    try {
+      await loadDemands();
+    } catch {
+      Alert.alert("Erro", "Falha ao atualizar fretes.");
+    } finally {
+      setRefreshing(false);
     }
   };
 
-  const renderFreteCard = ({ item }: { item: FreteCard }) => {
-    const urgenciaStyle = getUrgenciaStyle(item.urgencia);
+  const filtered = useMemo(() => {
+    const text = search.trim().toLowerCase();
+    return demands.filter((d) => {
+      const matchesSearch =
+        !text ||
+        d.title.toLowerCase().includes(text) ||
+        d.endereco_origem.toLowerCase().includes(text) ||
+        d.endereco_destino.toLowerCase().includes(text);
+      const matchesStatus = statusFilter === "todos" || d.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [demands, search, statusFilter]);
 
-    return (
-      <TouchableOpacity style={styles.freteCard} activeOpacity={0.75}>
-        <View style={styles.freteTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.freteTitulo} numberOfLines={2}>
-              {item.titulo}
-            </Text>
-            <View style={styles.freteMetaRow}>
-              <Ionicons name="location" size={13} color="#64748B" />
-              <Text style={styles.freteMetaText}>{item.distancia}</Text>
-              <View style={styles.metaDot} />
-              <MaterialCommunityIcons name="weight" size={13} color="#64748B" />
-              <Text style={styles.freteMetaText}>{item.peso}</Text>
-            </View>
-          </View>
-          <View style={[styles.urgenciaBadge, { backgroundColor: urgenciaStyle.bg }]}>
-            <Text style={[styles.urgenciaText, { color: urgenciaStyle.color }]}>
-              {urgenciaStyle.label}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.freteRoute}>
-          <View style={styles.routePoint}>
-            <View style={styles.routeDot} />
-            <Text style={styles.routeText} numberOfLines={1}>
-              {item.origem}
-            </Text>
-          </View>
-
-          <View style={styles.routeConnector} />
-
-          <View style={styles.routePoint}>
-            <View style={[styles.routeDot, styles.routeDotEnd]} />
-            <Text style={styles.routeText} numberOfLines={1}>
-              {item.destino}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.freteFooter}>
-          <View>
-            <Text style={styles.freteValorLabel}>Valor</Text>
-            <Text style={styles.freteValor}>R$ {item.valor.toLocaleString('pt-BR')}</Text>
-          </View>
-
-          {item.candidatos !== undefined && (
-            <View style={styles.candidatosContainer}>
-              <Ionicons name="people" size={14} color="#3B82F6" />
-              <Text style={styles.candidatosText}>{item.candidatos}</Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => {
-              setSelectedFrete(item);
-              setDetailsVisible(true);
-            }}
-          >
-            <Text style={styles.actionButtonText}>Ver</Text>
-            <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
+  const applyToDemand = async (demandId: string) => {
+    if (!token) {
+      Alert.alert("Sessão expirada", "Faça login novamente.");
+      router.replace("/login");
+      return;
+    }
+    try {
+      await createCandidatura(token, { demanda_id: demandId });
+      Alert.alert("Candidatura enviada!", "O contratante receberá sua solicitação.");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        Alert.alert("Erro", error.message);
+      } else {
+        Alert.alert("Erro", "Não foi possível enviar candidatura.");
+      }
+    }
   };
 
+  // Enquanto auth carrega ou está redirecionando, mostra spinner
+  if (authLoading || !token || user?.tipo_user !== "ENTREGADOR") {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: 30 }}
-      >
-        {/* Header */}
-        <View style={styles.headerContainer}>
-          <SafeAreaView style={styles.header}>
-            <View style={styles.headerTop}>
-              <View style={styles.greetingSection}>
-                <Text style={styles.greeting}>Olá, {userName}! 👋</Text>
-                <Text style={styles.subGreeting}>
-                  Encontre fretes próximos a você
-                </Text>
-              </View>
-              <TouchableOpacity style={styles.notificationButton}>
-                <Ionicons name="notifications" size={20} color="#3B82F6" />
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.badgeText}>3</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>Olá, {user?.nome ?? "Motorista"}</Text>
+          <Text style={styles.subtitle}>Fretes disponíveis para candidatura</Text>
         </View>
-
-        {/* Search Box */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={18} color="#64748B" />
-            <TextInput
-              placeholder="Buscar frete ou cidade..."
-              value={search}
-              onChangeText={setSearch}
-              style={styles.searchInput}
-              placeholderTextColor="#94A3B8"
-            />
-          </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => router.push("/minhas-candidaturas")}
+          >
+            <MaterialCommunityIcons name="send-clock-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => { signOut(); router.replace("/login"); }}
+          >
+            <Ionicons name="log-out-outline" size={22} color="#fff" />
+          </TouchableOpacity>
         </View>
+      </View>
 
-        {/* Filtros por Urgência */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.filterTitle}>Filtrar por urgência:</Text>
-          <View style={styles.filterRow}>
-            <TouchableOpacity
-              style={[styles.filterChip, selectedUrgencia === 'todas' && styles.filterChipActive]}
-              onPress={() => setSelectedUrgencia('todas')}
+      {/* Busca */}
+      <View style={styles.searchBox}>
+        <Ionicons name="search" size={18} color="#64748b" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar título ou cidade"
+          value={search}
+          onChangeText={setSearch}
+          placeholderTextColor="#94a3b8"
+        />
+      </View>
+
+      {/* Filtros de status */}
+      <View style={styles.filtersRow}>
+        {(
+          [
+            ["todos", "Todos"],
+            ["aberta", "Abertas"],
+            ["em_andamento", "Andamento"],
+            ["concluida", "Concluídas"],
+          ] as const
+        ).map(([value, label]) => (
+          <TouchableOpacity
+            key={value}
+            style={[styles.filterChip, statusFilter === value && styles.filterChipActive]}
+            onPress={() => setStatusFilter(value)}
+          >
+            <Text
+              style={statusFilter === value ? styles.filterTextActive : styles.filterText}
             >
-              <Text
-                style={selectedUrgencia === 'todas' ? styles.filterChipTextActive : styles.filterChipText}
-              >
-                Todos
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.filterChip, selectedUrgencia === 'alta' && styles.filterChipActive]}
-              onPress={() => setSelectedUrgencia('alta')}
-            >
-              <Text
-                style={selectedUrgencia === 'alta' ? styles.filterChipTextActive : styles.filterChipText}
-              >
-                🔴 Urgente
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.filterChip, selectedUrgencia === 'media' && styles.filterChipActive]}
-              onPress={() => setSelectedUrgencia('media')}
-            >
-              <Text
-                style={selectedUrgencia === 'media' ? styles.filterChipTextActive : styles.filterChipText}
-              >
-                🟡 Normal
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.filterChip, selectedUrgencia === 'baixa' && styles.filterChipActive]}
-              onPress={() => setSelectedUrgencia('baixa')}
-            >
-              <Text
-                style={selectedUrgencia === 'baixa' ? styles.filterChipTextActive : styles.filterChipText}
-              >
-                🟢 Flexível
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Fretes Disponíveis */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              🚚 Fretes Disponíveis ({filteredFretes.length})
+              {label}
             </Text>
-            <TouchableOpacity>
-              <Text style={styles.verMais}>Ver tudo</Text>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={18}
-                color="#3B82F6"
-                style={styles.chevron}
-              />
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-          {isLoading ? (
-            <ActivityIndicator size="large" color="#3B82F6" style={{ marginVertical: 20 }} />
-          ) : filteredFretes.length > 0 ? (
-            <FlatList
-              data={filteredFretes}
-              renderItem={renderFreteCard}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="inbox" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyStateText}>Nenhum frete encontrado</Text>
-            </View>
-          )}
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#3b82f6" />
         </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/demanda/${item.id}`)}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardRoute}>
+                <Ionicons name="location-outline" size={13} color="#64748b" /> {item.endereco_origem}
+              </Text>
+              <Text style={styles.cardRoute}>
+                <Ionicons name="navigate-outline" size={13} color="#64748b" /> {item.endereco_destino}
+              </Text>
 
-        {/* Quick Links */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Atalhos Rápidos</Text>
-          <View style={styles.quickLinksGrid}>
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#DBEAFE' }]}>
-                <MaterialCommunityIcons name="chat-multiple" size={22} color="#3B82F6" />
+              <View style={styles.cardMeta}>
+                <View style={styles.metaItem}>
+                  <MaterialCommunityIcons name="weight" size={14} color="#64748b" />
+                  <Text style={styles.metaText}>{item.peso_carga_kg} kg</Text>
+                </View>
+                <Text style={styles.cardStatus}>{item.status.replace("_", " ")}</Text>
               </View>
-              <Text style={styles.quickLinkText}>Mensagens</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#FEE2E2' }]}>
-                <MaterialCommunityIcons name="history" size={22} color="#DC2626" />
-              </View>
-              <Text style={styles.quickLinkText}>Histórico</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#FCD34D' }]}>
-                <MaterialCommunityIcons name="star" size={22} color="#F59E0B" />
-              </View>
-              <Text style={styles.quickLinkText}>Avaliações</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View style={[styles.quickLinkIcon, { backgroundColor: '#DCFCE7' }]}>
-                <MaterialCommunityIcons name="cog" size={22} color="#16A34A" />
-              </View>
-              <Text style={styles.quickLinkText}>Configurações</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Modal de Detalhes */}
-      <Modal visible={detailsVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {/* Header do Modal */}
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setDetailsVisible(false)}>
-                <Ionicons name="close" size={28} color="#0F172A" />
-              </TouchableOpacity>
-              <Text style={styles.modalHeaderTitle}>Detalhes do Frete</Text>
-              <View style={{ width: 28 }} />
-            </View>
-
-            {selectedFrete && (
-              <ScrollView style={styles.modalBody}>
-                {/* Título */}
-                <Text style={styles.modalTitle}>{selectedFrete.titulo}</Text>
-
-                {/* Urgência */}
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Urgência</Text>
-                  <View
-                    style={[
-                      styles.modalBadge,
-                      {
-                        backgroundColor:
-                          selectedFrete.urgencia === 'alta'
-                            ? '#FEE2E2'
-                            : selectedFrete.urgencia === 'media'
-                            ? '#FEF3C7'
-                            : '#DBEAFE',
-                      },
-                    ]}
+              <View style={styles.cardFooter}>
+                <Text style={styles.cardValue}>
+                  R$ {item.valor_proposto.toLocaleString("pt-BR")}
+                </Text>
+                {item.status === "aberta" && (
+                  <TouchableOpacity
+                    style={styles.applyButton}
+                    onPress={() => applyToDemand(item.id)}
                   >
-                    <Text
-                      style={{
-                        color:
-                          selectedFrete.urgencia === 'alta'
-                            ? '#DC2626'
-                            : selectedFrete.urgencia === 'media'
-                            ? '#D97706'
-                            : '#2563EB',
-                        fontWeight: '600',
-                      }}
-                    >
-                      {selectedFrete.urgencia === 'alta'
-                        ? '🔴 Urgente'
-                        : selectedFrete.urgencia === 'media'
-                        ? '🟡 Normal'
-                        : '🟢 Flexível'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Rotas */}
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Rota</Text>
-                  <View style={styles.routeDetail}>
-                    <View style={styles.routeDetailItem}>
-                      <Ionicons name="location" size={20} color="#3B82F6" />
-                      <View style={{ marginLeft: 12, flex: 1 }}>
-                        <Text style={styles.routeLabel}>Origem</Text>
-                        <Text style={styles.routeValue}>{selectedFrete.origem}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.routeDetailConnector} />
-
-                    <View style={styles.routeDetailItem}>
-                      <Ionicons name="location" size={20} color="#0EA5E9" />
-                      <View style={{ marginLeft: 12, flex: 1 }}>
-                        <Text style={styles.routeLabel}>Destino</Text>
-                        <Text style={styles.routeValue}>{selectedFrete.destino}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Informações */}
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Informações</Text>
-                  <View style={styles.infoGrid}>
-                    <View style={styles.infoItem}>
-                      <Text style={styles.infoLabel}>Peso</Text>
-                      <Text style={styles.infoValue}>{selectedFrete.peso}</Text>
-                    </View>
-                    <View style={styles.infoItem}>
-                      <Text style={styles.infoLabel}>Distância</Text>
-                      <Text style={styles.infoValue}>{selectedFrete.distancia}</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Preço e Candidatos */}
-                <View style={styles.modalSection}>
-                  <View style={styles.priceContainer}>
-                    <View>
-                      <Text style={styles.modalLabel}>Valor do Frete</Text>
-                      <Text style={styles.modalPrice}>
-                        R$ {selectedFrete.valor.toLocaleString('pt-BR')}
-                      </Text>
-                    </View>
-                    {selectedFrete.candidatos !== undefined && (
-                      <View style={styles.candidatosInfo}>
-                        <Ionicons name="people" size={20} color="#3B82F6" />
-                        <View>
-                          <Text style={styles.modalLabel}>Candidatos</Text>
-                          <Text style={styles.candidatosCount}>{selectedFrete.candidatos}</Text>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                {/* Botão Candidatar */}
-                <TouchableOpacity style={styles.candidarButton}>
-                  <Text style={styles.candidarButtonText}>Candidatar-se ao Frete</Text>
-                </TouchableOpacity>
-
-                <View style={{ height: 20 }} />
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
-    </View>
+                    <Text style={styles.applyButtonText}>Candidatar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <Text style={styles.empty}>Nenhum frete disponível no momento.</Text>
+          }
+        />
+      )}
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  headerContainer: {
-    backgroundColor: '#0F172A',
-    paddingBottom: 20,
-  },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  greetingSection: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 6,
-  },
-  subGreeting: {
-    fontSize: 14,
-    color: '#CBD5F5',
-    fontWeight: '500',
-  },
-  notificationButton: {
-    position: 'relative',
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#EF4444',
-    borderRadius: 10,
-    width: 22,
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#0F172A',
-  },
-  badgeText: {
-    color: '#FFF',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 20,
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  searchInput: {
-    marginLeft: 10,
-    flex: 1,
-    fontSize: 14,
-    color: '#0F172A',
-  },
-  sectionContainer: {
-    paddingHorizontal: 20,
-    marginTop: 16,
-  },
-  filterTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-  },
-  filterChipActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  filterChipTextActive: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  verMais: {
-    fontSize: 13,
-    color: '#3B82F6',
-    fontWeight: '600',
-  },
-  chevron: {
-    marginTop: -2,
-  },
-  freteCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  freteTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  freteTitulo: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  freteMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  freteMetaText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#CBD5E1',
-    marginHorizontal: 4,
-  },
-  urgenciaBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  urgenciaText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  freteRoute: {
-    marginBottom: 12,
-    paddingVertical: 8,
-    gap: 4,
-  },
-  routePoint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  routeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#3B82F6',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  routeDotEnd: {
-    backgroundColor: '#0EA5E9',
-  },
-  routeConnector: {
-    height: 16,
-    width: 2,
-    backgroundColor: '#BFDBFE',
-    marginLeft: 4,
-  },
-  routeText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
-    flex: 1,
-  },
-  freteFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    gap: 8,
-  },
-  freteValorLabel: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  freteValor: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#3B82F6',
-  },
-  candidatosContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  candidatosText: {
-    fontSize: 13,
-    color: '#3B82F6',
-    fontWeight: '600',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  quickLinksGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
-  },
-  quickLinkCard: {
-    width: (width - 60) / 2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-    borderTopWidth: 3,
-    borderTopColor: '#F0F4F8',
-  },
-  quickLinkIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  quickLinkText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0F172A',
-    textAlign: 'center',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-
-  // ===== MODAL STYLES =====
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '90%',
-    paddingBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    backgroundColor: "#0f172a",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  modalHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+  title: { color: "#fff", fontSize: 22, fontWeight: "700" },
+  subtitle: { color: "#cbd5e1", marginTop: 2 },
+  headerActions: { flexDirection: "row", gap: 4 },
+  headerBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  modalBody: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 20,
-  },
-  modalSection: {
-    marginBottom: 20,
-  },
-  modalSectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  modalBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  routeDetail: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+  searchBox: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: "#fff",
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  routeDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  searchInput: { flex: 1, fontSize: 14, color: "#0f172a" },
+  filtersRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 16,
+    marginTop: 10,
   },
-  routeDetailConnector: {
-    height: 20,
-    width: 2,
-    backgroundColor: '#BFDBFE',
-    marginLeft: 10,
-    marginVertical: 8,
+  filterChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
   },
-  routeLabel: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  routeValue: {
-    fontSize: 13,
-    color: '#0F172A',
-    fontWeight: '600',
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  infoItem: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
+  filterChipActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
+  filterText: { color: "#334155", fontSize: 12, fontWeight: "600" },
+  filterTextActive: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  listContent: { padding: 16, gap: 10, paddingBottom: 24 },
+  card: {
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#e2e8f0",
   },
-  infoLabel: {
+  cardTitle: { fontWeight: "700", fontSize: 15, color: "#0f172a" },
+  cardRoute: { color: "#475569", marginTop: 4, fontSize: 13 },
+  cardMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  metaText: { color: "#64748b", fontSize: 12 },
+  cardFooter: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cardValue: { color: "#2563eb", fontWeight: "700", fontSize: 16 },
+  cardStatus: {
+    textTransform: "capitalize",
+    color: "#334155",
     fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#0F172A',
-    fontWeight: '700',
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#e2e8f0",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
-  modalLabel: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  modalPrice: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#3B82F6',
-  },
-  candidatosInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  candidatosCount: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  candidarButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 14,
+  applyButton: {
+    backgroundColor: "#2563eb",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
   },
-  candidarButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  applyButtonText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  empty: { textAlign: "center", color: "#64748b", marginTop: 24 },
 });
-
-export default MotoristaHomeScreen;

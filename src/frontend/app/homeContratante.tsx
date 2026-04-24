@@ -1,1265 +1,311 @@
-import React, { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
-
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  FlatList,
-  Dimensions,
   ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
   TextInput,
-  Modal,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-// Types
-interface FreteCard {
-  id: string;
-  titulo: string;
-  origem: string;
-  destino: string;
-  valor: number;
-  peso: string;
-  urgencia: "baixa" | "media" | "alta";
-  distancia: string;
-  candidatos?: number;
-  status?: "ativo" | "em_progresso" | "concluido";
-}
+import { ApiError, listMyDemands, type Demand } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
-interface ContratanteHomeScreenProps {
-  userName?: string;
-}
-
-const { width } = Dimensions.get("window");
-
-const ContratanteHomeScreen: React.FC<ContratanteHomeScreenProps> = ({
-  userName = "Usuário",
-}) => {
+export default function ContratanteHomeScreen() {
   const router = useRouter();
-  const [fretes, setFretes] = useState<FreteCard[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { token, user, isLoading: authLoading, signOut } = useAuth();
+
+  const [demands, setDemands] = useState<Demand[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "todos" | "ativo" | "em_progresso" | "concluido"
-  >("todos");
-  const [selectedFrete, setSelectedFrete] = useState<FreteCard | null>(null);
-  const [detailsVisible, setDetailsVisible] = useState(false);
+
+  // Aguarda auth carregar e depois verifica permissão
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    if (user?.tipo_user !== "CRIADOR_DEMANDA") {
+      router.replace("/escolher-perfil");
+      return;
+    }
+  }, [authLoading, token, user, router]);
+
+  const loadDemands = useCallback(async () => {
+    if (!token) return;
+    const data = await listMyDemands(token);
+    setDemands(data);
+  }, [token]);
 
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    if (authLoading || !token || user?.tipo_user !== "CRIADOR_DEMANDA") return;
 
-  const loadInitialData = () => {
-    setIsLoading(true);
-
-    setFretes([
-      {
-        id: "1",
-        titulo: "Transporte de Maquinário Industrial",
-        origem: "São Bernardo do Campo, SP",
-        destino: "Belo Horizonte, MG",
-        valor: 2500,
-        peso: "15 toneladas",
-        urgencia: "alta",
-        distancia: "580 km",
-        candidatos: 8,
-        status: "ativo",
-      },
-      {
-        id: "2",
-        titulo: "Frete de Peças Automotivas",
-        origem: "Guarulhos, SP",
-        destino: "Curitiba, PR",
-        valor: 1500,
-        peso: "8 toneladas",
-        urgencia: "media",
-        distancia: "420 km",
-        candidatos: 12,
-        status: "em_progresso",
-      },
-      {
-        id: "3",
-        titulo: "Carga Refrigerada de Alimentos",
-        origem: "São Paulo, SP",
-        destino: "Brasília, DF",
-        valor: 3000,
-        peso: "10 toneladas",
-        urgencia: "alta",
-        distancia: "950 km",
-        candidatos: 15,
-        status: "ativo",
-      },
-      {
-        id: "4",
-        titulo: "Transporte de Eletrônicos",
-        origem: "Diadema, SP",
-        destino: "Porto Alegre, RS",
-        valor: 2200,
-        peso: "6 toneladas",
-        urgencia: "media",
-        distancia: "850 km",
-        candidatos: 7,
-        status: "concluido",
-      },
-    ]);
-
-    setTimeout(() => setIsLoading(false), 600);
-  };
-
-  // Filtrar fretes por busca e status
-  const filteredFretes = fretes.filter((f) => {
-    const matchSearch =
-      f.titulo.toLowerCase().includes(search.toLowerCase()) ||
-      f.origem.toLowerCase().includes(search.toLowerCase()) ||
-      f.destino.toLowerCase().includes(search.toLowerCase());
-
-    const matchStatus = statusFilter === "todos" || f.status === statusFilter;
-
-    return matchSearch && matchStatus;
-  });
-
-  const getUrgenciaStyle = (urgencia: string) => {
-    switch (urgencia) {
-      case "alta":
-        return { bg: "#FEE2E2", color: "#DC2626", label: "🔴 Urgente" };
-      case "media":
-        return { bg: "#FEF3C7", color: "#D97706", label: "🟡 Normal" };
-      case "baixa":
-        return { bg: "#DBEAFE", color: "#2563EB", label: "🟢 Flexível" };
-      default:
-        return { bg: "#F3F4F6", color: "#6B7280", label: "Normal" };
-    }
-  };
-
-  const getStatusStyle = (status?: string) => {
-    switch (status) {
-      case "ativo":
-        return { bg: "#DBEAFE", color: "#2563EB", label: "● Ativo" };
-      case "em_progresso":
-        return { bg: "#FEF3C7", color: "#D97706", label: "● Em Progresso" };
-      case "concluido":
-        return { bg: "#DCFCE7", color: "#16A34A", label: "✓ Concluído" };
-      default:
-        return { bg: "#F3F4F6", color: "#6B7280", label: "Normal" };
-    }
-  };
-
-  const handleAddDemanda = () => {
-    router.push("/cadastro-demanda");
-  };
-
-  const renderFreteCard = ({ item }: { item: FreteCard }) => {
-    const urgenciaStyle = getUrgenciaStyle(item.urgencia);
-    const statusStyle = getStatusStyle(item.status);
-
-    return (
-      <TouchableOpacity style={styles.freteCard} activeOpacity={0.75}>
-        <View style={styles.freteTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.freteTitulo} numberOfLines={2}>
-              {item.titulo}
-            </Text>
-            <View style={styles.freteMetaRow}>
-              <Ionicons name="location" size={13} color="#64748B" />
-              <Text style={styles.freteMetaText}>{item.distancia}</Text>
-              <View style={styles.metaDot} />
-              <MaterialCommunityIcons name="weight" size={13} color="#64748B" />
-              <Text style={styles.freteMetaText}>{item.peso}</Text>
-            </View>
-          </View>
-          <View
-            style={[
-              styles.urgenciaBadge,
-              { backgroundColor: urgenciaStyle.bg },
-            ]}
-          >
-            <Text style={[styles.urgenciaText, { color: urgenciaStyle.color }]}>
-              {urgenciaStyle.label}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.freteRoute}>
-          <View style={styles.routePoint}>
-            <View style={styles.routeDot} />
-            <Text style={styles.routeText} numberOfLines={1}>
-              {item.origem}
-            </Text>
-          </View>
-
-          <View style={styles.routeConnector} />
-
-          <View style={styles.routePoint}>
-            <View style={[styles.routeDot, styles.routeDotEnd]} />
-            <Text style={styles.routeText} numberOfLines={1}>
-              {item.destino}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.freteFooter}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.freteValorLabel}>Valor</Text>
-            <Text style={styles.freteValor}>
-              R$ {item.valor.toLocaleString("pt-BR")}
-            </Text>
-          </View>
-
-          <View style={styles.statusContainer}>
-            <View
-              style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}
-            >
-              <Text style={[styles.statusText, { color: statusStyle.color }]}>
-                {statusStyle.label}
-              </Text>
-            </View>
-          </View>
-
-          {item.candidatos !== undefined && (
-            <View style={styles.candidatosContainer}>
-              <Ionicons name="people" size={14} color="#3B82F6" />
-              <Text style={styles.candidatosText}>{item.candidatos}</Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => {
-              setSelectedFrete(item);
-              setDetailsVisible(true);
-            }}
-          >
-            <Text style={styles.actionButtonText}>Detalhes</Text>
-            <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const getStatsData = () => {
-    const stats = {
-      total: fretes.length,
-      ativos: fretes.filter((f) => f.status === "ativo").length,
-      emProgresso: fretes.filter((f) => f.status === "em_progresso").length,
-      concluidos: fretes.filter((f) => f.status === "concluido").length,
+    let cancelled = false;
+    const bootstrap = async () => {
+      try {
+        await loadDemands();
+      } catch (error) {
+        if (cancelled) return;
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : "Não foi possível carregar suas demandas.";
+        Alert.alert("Erro", message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     };
-    return stats;
+
+    bootstrap();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, token, user, loadDemands]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!token || user?.tipo_user !== "CRIADOR_DEMANDA") return;
+      loadDemands().catch(() => undefined);
+    }, [loadDemands, token, user])
+  );
+
+  const onRefresh = async () => {
+    if (!token) return;
+    setRefreshing(true);
+    try {
+      await loadDemands();
+    } catch {
+      Alert.alert("Erro", "Falha ao atualizar demandas.");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  const stats = getStatsData();
+  const filtered = useMemo(() => {
+    const text = search.trim().toLowerCase();
+    if (!text) return demands;
+    return demands.filter(
+      (d) =>
+        d.title.toLowerCase().includes(text) ||
+        d.endereco_origem.toLowerCase().includes(text) ||
+        d.endereco_destino.toLowerCase().includes(text)
+    );
+  }, [demands, search]);
+
+  const stats = useMemo(
+    () => ({
+      total: demands.length,
+      abertas: demands.filter((d) => d.status === "aberta").length,
+      andamento: demands.filter((d) => d.status === "em_andamento").length,
+      concluidas: demands.filter((d) => d.status === "concluida").length,
+    }),
+    [demands]
+  );
+
+  // Enquanto auth carrega ou está redirecionando, mostra spinner
+  if (authLoading || !token || user?.tipo_user !== "CRIADOR_DEMANDA") {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
-        {/* Header */}
-        <View style={styles.headerContainer}>
-          <SafeAreaView style={styles.header}>
-            <View style={styles.headerTop}>
-              <View style={styles.greetingSection}>
-                <Text style={styles.greeting}>Olá, {userName}! 👋</Text>
-                <Text style={styles.subGreeting}>
-                  Publique e acompanhe seus fretes
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>Olá, {user?.nome ?? "Usuário"}</Text>
+          <Text style={styles.subtitle}>Gerencie suas demandas</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => {
+            signOut();
+            router.replace("/login");
+          }}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Stats */}
+      <View style={styles.statsRow}>
+        <StatCard label="Total" value={stats.total} icon="file-document" />
+        <StatCard label="Abertas" value={stats.abertas} icon="package-variant" />
+        <StatCard label="Andamento" value={stats.andamento} icon="clock-outline" />
+        <StatCard label="Concluídas" value={stats.concluidas} icon="check-circle" />
+      </View>
+
+      {/* Busca */}
+      <View style={styles.searchBox}>
+        <Ionicons name="search" size={18} color="#64748b" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por título ou cidade"
+          value={search}
+          onChangeText={setSearch}
+          placeholderTextColor="#94a3b8"
+        />
+      </View>
+
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/demanda/${item.id}`)}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardRoute}>
+                <Ionicons name="location-outline" size={13} color="#64748b" /> {item.endereco_origem}
+              </Text>
+              <Text style={styles.cardRoute}>
+                <Ionicons name="navigate-outline" size={13} color="#64748b" /> {item.endereco_destino}
+              </Text>
+              <View style={styles.cardFooter}>
+                <Text style={styles.cardValue}>
+                  R$ {item.valor_proposto.toLocaleString("pt-BR")}
                 </Text>
+                <Text style={styles.cardStatus}>{item.status.replace("_", " ")}</Text>
               </View>
-              <TouchableOpacity style={styles.notificationButton}>
-                <Ionicons name="notifications" size={20} color="#3B82F6" />
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.badgeText}>5</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-        </View>
-
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <View style={[styles.statCard, { backgroundColor: "#EFF6FF" }]}>
-            <View style={[styles.statIcon, { backgroundColor: "#DBEAFE" }]}>
-              <MaterialCommunityIcons
-                name="file-document"
-                size={20}
-                color="#3B82F6"
-              />
-            </View>
-            <View>
-              <Text style={styles.statLabel}>Fretes Publicados</Text>
-              <Text style={styles.statValue}>{stats.total}</Text>
-            </View>
-          </View>
-
-          <View style={[styles.statCard, { backgroundColor: "#FEF3C7" }]}>
-            <View style={[styles.statIcon, { backgroundColor: "#FCD34D" }]}>
-              <MaterialCommunityIcons
-                name="clock-outline"
-                size={20}
-                color="#D97706"
-              />
-            </View>
-            <View>
-              <Text style={styles.statLabel}>Em Andamento</Text>
-              <Text style={styles.statValue}>{stats.emProgresso}</Text>
-            </View>
-          </View>
-
-          <View style={[styles.statCard, { backgroundColor: "#DCFCE7" }]}>
-            <View style={[styles.statIcon, { backgroundColor: "#BBFBEE" }]}>
-              <MaterialCommunityIcons
-                name="check-circle"
-                size={20}
-                color="#16A34A"
-              />
-            </View>
-            <View>
-              <Text style={styles.statLabel}>Concluídos</Text>
-              <Text style={styles.statValue}>{stats.concluidos}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Search Box */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={18} color="#64748B" />
-            <TextInput
-              placeholder="Buscar frete ou cidade..."
-              value={search}
-              onChangeText={setSearch}
-              style={styles.searchInput}
-              placeholderTextColor="#94A3B8"
-            />
-          </View>
-        </View>
-
-        {/* Filtros por Status */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.filterTitle}>Filtrar por status:</Text>
-          <View style={styles.filterRow}>
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                statusFilter === "todos" && styles.filterChipActive,
-              ]}
-              onPress={() => setStatusFilter("todos")}
-            >
-              <Text
-                style={
-                  statusFilter === "todos"
-                    ? styles.filterChipTextActive
-                    : styles.filterChipText
-                }
-              >
-                Todos
-              </Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                statusFilter === "ativo" && styles.filterChipActive,
-              ]}
-              onPress={() => setStatusFilter("ativo")}
-            >
-              <Text
-                style={
-                  statusFilter === "ativo"
-                    ? styles.filterChipTextActive
-                    : styles.filterChipText
-                }
-              >
-                Ativos
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                statusFilter === "em_progresso" && styles.filterChipActive,
-              ]}
-              onPress={() => setStatusFilter("em_progresso")}
-            >
-              <Text
-                style={
-                  statusFilter === "em_progresso"
-                    ? styles.filterChipTextActive
-                    : styles.filterChipText
-                }
-              >
-                Em Progresso
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                statusFilter === "concluido" && styles.filterChipActive,
-              ]}
-              onPress={() => setStatusFilter("concluido")}
-            >
-              <Text
-                style={
-                  statusFilter === "concluido"
-                    ? styles.filterChipTextActive
-                    : styles.filterChipText
-                }
-              >
-                Concluídos
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Seus Fretes */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              📦 Seus Fretes ({filteredFretes.length})
-            </Text>
-            <TouchableOpacity>
-              <Text style={styles.verMais}>Ver tudo</Text>
-              <MaterialCommunityIcons
-                name="chevron-right"
-                size={18}
-                color="#3B82F6"
-                style={styles.chevron}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {isLoading ? (
-            <ActivityIndicator
-              size="large"
-              color="#3B82F6"
-              style={{ marginVertical: 20 }}
-            />
-          ) : filteredFretes.length > 0 ? (
-            <FlatList
-              data={filteredFretes}
-              renderItem={renderFreteCard}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="inbox" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyStateText}>
-                Nenhum frete neste status
-              </Text>
-            </View>
           )}
-        </View>
+          ListEmptyComponent={
+            <Text style={styles.empty}>Nenhuma demanda encontrada.</Text>
+          }
+        />
+      )}
 
-        {/* Quick Links */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Atalhos Rápidos</Text>
-          <View style={styles.quickLinksGrid}>
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View
-                style={[styles.quickLinkIcon, { backgroundColor: "#DBEAFE" }]}
-              >
-                <MaterialCommunityIcons
-                  name="chat-multiple"
-                  size={22}
-                  color="#3B82F6"
-                />
-              </View>
-              <Text style={styles.quickLinkText}>Mensagens</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View
-                style={[styles.quickLinkIcon, { backgroundColor: "#FEE2E2" }]}
-              >
-                <MaterialCommunityIcons
-                  name="history"
-                  size={22}
-                  color="#DC2626"
-                />
-              </View>
-              <Text style={styles.quickLinkText}>Histórico</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View
-                style={[styles.quickLinkIcon, { backgroundColor: "#FCD34D" }]}
-              >
-                <MaterialCommunityIcons name="star" size={22} color="#F59E0B" />
-              </View>
-              <Text style={styles.quickLinkText}>Avaliações</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickLinkCard}>
-              <View
-                style={[styles.quickLinkIcon, { backgroundColor: "#DCFCE7" }]}
-              >
-                <MaterialCommunityIcons name="cog" size={22} color="#16A34A" />
-              </View>
-              <Text style={styles.quickLinkText}>Configurações</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Modal de Detalhes */}
-      <Modal visible={detailsVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {/* Header do Modal */}
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setDetailsVisible(false)}>
-                <Ionicons name="close" size={28} color="#0F172A" />
-              </TouchableOpacity>
-              <Text style={styles.modalHeaderTitle}>Detalhes do Frete</Text>
-              <View style={{ width: 28 }} />
-            </View>
-
-            {selectedFrete && (
-              <ScrollView style={styles.modalBody}>
-                {/* Título */}
-                <Text style={styles.modalTitle}>{selectedFrete.titulo}</Text>
-
-                {/* Status e Urgência */}
-                <View style={styles.badgesContainer}>
-                  <View
-                    style={[
-                      styles.modalBadge,
-                      {
-                        backgroundColor:
-                          selectedFrete.urgencia === "alta"
-                            ? "#FEE2E2"
-                            : selectedFrete.urgencia === "media"
-                              ? "#FEF3C7"
-                              : "#DBEAFE",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={{
-                        color:
-                          selectedFrete.urgencia === "alta"
-                            ? "#DC2626"
-                            : selectedFrete.urgencia === "media"
-                              ? "#D97706"
-                              : "#2563EB",
-                        fontWeight: "600",
-                        fontSize: 12,
-                      }}
-                    >
-                      {selectedFrete.urgencia === "alta"
-                        ? "🔴 Urgente"
-                        : selectedFrete.urgencia === "media"
-                          ? "🟡 Normal"
-                          : "🟢 Flexível"}
-                    </Text>
-                  </View>
-
-                  {selectedFrete.status && (
-                    <View
-                      style={[
-                        styles.modalBadge,
-                        {
-                          backgroundColor:
-                            selectedFrete.status === "ativo"
-                              ? "#DBEAFE"
-                              : selectedFrete.status === "em_progresso"
-                                ? "#FEF3C7"
-                                : "#DCFCE7",
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color:
-                            selectedFrete.status === "ativo"
-                              ? "#2563EB"
-                              : selectedFrete.status === "em_progresso"
-                                ? "#D97706"
-                                : "#16A34A",
-                          fontWeight: "600",
-                          fontSize: 12,
-                        }}
-                      >
-                        {selectedFrete.status === "ativo"
-                          ? "● Ativo"
-                          : selectedFrete.status === "em_progresso"
-                            ? "● Em Progresso"
-                            : "✓ Concluído"}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Rotas */}
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Rota</Text>
-                  <View style={styles.routeDetail}>
-                    <View style={styles.routeDetailItem}>
-                      <Ionicons name="location" size={20} color="#3B82F6" />
-                      <View style={{ marginLeft: 12, flex: 1 }}>
-                        <Text style={styles.routeLabel}>Origem</Text>
-                        <Text style={styles.routeValue}>
-                          {selectedFrete.origem}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.routeDetailConnector} />
-
-                    <View style={styles.routeDetailItem}>
-                      <Ionicons name="location" size={20} color="#0EA5E9" />
-                      <View style={{ marginLeft: 12, flex: 1 }}>
-                        <Text style={styles.routeLabel}>Destino</Text>
-                        <Text style={styles.routeValue}>
-                          {selectedFrete.destino}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Informações */}
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Informações</Text>
-                  <View style={styles.infoGrid}>
-                    <View style={styles.infoItem}>
-                      <Text style={styles.infoLabel}>Peso</Text>
-                      <Text style={styles.infoValue}>{selectedFrete.peso}</Text>
-                    </View>
-                    <View style={styles.infoItem}>
-                      <Text style={styles.infoLabel}>Distância</Text>
-                      <Text style={styles.infoValue}>
-                        {selectedFrete.distancia}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Preço e Candidatos */}
-                <View style={styles.modalSection}>
-                  <View style={styles.priceContainer}>
-                    <View>
-                      <Text style={styles.modalLabel}>Valor do Frete</Text>
-                      <Text style={styles.modalPrice}>
-                        R$ {selectedFrete.valor.toLocaleString("pt-BR")}
-                      </Text>
-                    </View>
-                    {selectedFrete.candidatos !== undefined && (
-                      <View style={styles.candidatosInfo}>
-                        <Ionicons name="people" size={20} color="#3B82F6" />
-                        <View>
-                          <Text style={styles.modalLabel}>Candidatos</Text>
-                          <Text style={styles.candidatosCount}>
-                            {selectedFrete.candidatos}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                {/* Botões de Ação */}
-                <View style={styles.actionButtonsContainer}>
-                  <TouchableOpacity style={styles.editButton}>
-                    <MaterialCommunityIcons
-                      name="pencil"
-                      size={18}
-                      color="#3B82F6"
-                    />
-                    <Text style={styles.editButtonText}>Editar Frete</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.deleteButton}>
-                    <MaterialCommunityIcons
-                      name="trash-can-outline"
-                      size={18}
-                      color="#DC2626"
-                    />
-                    <Text style={styles.deleteButtonText}>Cancelar Frete</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={{ height: 20 }} />
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Floating Action Button */}
+      {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={handleAddDemanda}
-        activeOpacity={0.8}
+        onPress={() => router.push("/cadastro-demanda")}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
+    </SafeAreaView>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+}) {
+  return (
+    <View style={styles.statCard}>
+      <MaterialCommunityIcons name={icon} size={18} color="#2563eb" />
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  headerContainer: {
-    backgroundColor: "#0F172A",
-    paddingBottom: 20,
-  },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  greetingSection: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginBottom: 6,
-  },
-  subGreeting: {
-    fontSize: 14,
-    color: "#CBD5F5",
-    fontWeight: "500",
-  },
-  notificationButton: {
-    position: "relative",
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  notificationBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#EF4444",
-    borderRadius: 10,
-    width: 22,
-    height: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#0F172A",
-  },
-  badgeText: {
-    color: "#FFF",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  statsContainer: {
-    paddingHorizontal: 20,
-    marginTop: 20,
-    gap: 12,
-  },
-  statCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 10,
-    gap: 12,
-  },
-  statIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 20,
-  },
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  searchInput: {
-    marginLeft: 10,
-    flex: 1,
-    fontSize: 14,
-    color: "#0F172A",
-  },
-  sectionContainer: {
-    paddingHorizontal: 20,
-    marginTop: 16,
-  },
-  filterTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#475569",
-    marginBottom: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  filterRow: {
-    flexDirection: "row",
-    gap: 10,
-    flexWrap: "wrap",
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-  },
-  filterChipActive: {
-    backgroundColor: "#3B82F6",
-    borderColor: "#3B82F6",
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  filterChipTextActive: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  verMais: {
-    fontSize: 13,
-    color: "#3B82F6",
-    fontWeight: "600",
-  },
-  chevron: {
-    marginTop: -2,
-  },
-  freteCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: "#3B82F6",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  freteTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  freteTitulo: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  freteMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  freteMetaText: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: "#CBD5E1",
-    marginHorizontal: 4,
-  },
-  urgenciaBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  urgenciaText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  freteRoute: {
-    marginBottom: 12,
-    paddingVertical: 8,
-    gap: 4,
-  },
-  routePoint: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  routeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#3B82F6",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-  },
-  routeDotEnd: {
-    backgroundColor: "#0EA5E9",
-  },
-  routeConnector: {
-    height: 16,
-    width: 2,
-    backgroundColor: "#BFDBFE",
-    marginLeft: 4,
-  },
-  routeText: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-    flex: 1,
-  },
-  freteFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-    gap: 8,
-  },
-  freteValorLabel: {
-    fontSize: 11,
-    color: "#94A3B8",
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  freteValor: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#3B82F6",
-  },
-  statusContainer: {
-    flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  candidatosContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  candidatosText: {
-    fontSize: 13,
-    color: "#3B82F6",
-    fontWeight: "600",
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#3B82F6",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  actionButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  quickLinksGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    justifyContent: "space-between",
-  },
-  quickLinkCard: {
-    width: (width - 60) / 2,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-    borderTopWidth: 3,
-    borderTopColor: "#F0F4F8",
-  },
-  quickLinkIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  quickLinkText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#0F172A",
-    textAlign: "center",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: "#94A3B8",
-    fontWeight: "500",
-  },
-  fab: {
-    position: "absolute",
-    bottom: 30,
-    right: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#3B82F6",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-
-  // ===== MODAL STYLES =====
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#F8FAFC",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "90%",
-    paddingBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    backgroundColor: "#0f172a",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  modalHeaderTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  modalBody: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 16,
-  },
-  badgesContainer: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
-    flexWrap: "wrap",
-  },
-  modalSection: {
-    marginBottom: 20,
-  },
-  modalSectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#475569",
-    marginBottom: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  modalBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  routeDetail: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  routeDetailItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  routeDetailConnector: {
-    height: 20,
-    width: 2,
-    backgroundColor: "#BFDBFE",
-    marginLeft: 10,
-    marginVertical: 8,
-  },
-  routeLabel: {
-    fontSize: 12,
-    color: "#94A3B8",
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  routeValue: {
-    fontSize: 13,
-    color: "#0F172A",
-    fontWeight: "600",
-  },
-  infoGrid: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  infoItem: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: "#94A3B8",
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  priceContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+  },
+  title: { color: "#fff", fontSize: 22, fontWeight: "700" },
+  subtitle: { color: "#cbd5e1", marginTop: 2 },
+  statsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 12,
+    marginTop: 14,
+    gap: 8,
+  },
+  statCard: {
+    width: "48%",
+    backgroundColor: "#fff",
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#e2e8f0",
   },
-  modalLabel: {
-    fontSize: 12,
-    color: "#94A3B8",
-    fontWeight: "500",
+  statValue: { fontSize: 18, fontWeight: "700", color: "#0f172a", marginTop: 6 },
+  statLabel: { fontSize: 12, color: "#64748b" },
+  searchBox: {
+    marginHorizontal: 16,
+    marginTop: 12,
     marginBottom: 4,
-  },
-  modalPrice: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#3B82F6",
-  },
-  candidatosInfo: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
-  candidatosCount: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
+  searchInput: { flex: 1, fontSize: 14, color: "#0f172a" },
+  listContent: { padding: 16, paddingBottom: 100, gap: 10 },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-  actionButtonsContainer: {
+  cardTitle: { fontWeight: "700", fontSize: 15, color: "#0f172a" },
+  cardRoute: { color: "#475569", marginTop: 4, fontSize: 13 },
+  cardFooter: {
+    marginTop: 10,
     flexDirection: "row",
-    gap: 12,
-    marginTop: 20,
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  editButton: {
-    flex: 1,
-    flexDirection: "row",
+  cardValue: { color: "#2563eb", fontWeight: "700" },
+  cardStatus: {
+    textTransform: "capitalize",
+    color: "#334155",
+    fontSize: 12,
+    backgroundColor: "#e2e8f0",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  empty: { textAlign: "center", color: "#64748b", marginTop: 24 },
+  fab: {
+    position: "absolute",
+    right: 22,
+    bottom: 26,
+    backgroundColor: "#2563eb",
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#3B82F6",
-    backgroundColor: "#EFF6FF",
-  },
-  editButtonText: {
-    color: "#3B82F6",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  deleteButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#DC2626",
-    backgroundColor: "#FEE2E2",
-  },
-  deleteButtonText: {
-    color: "#DC2626",
-    fontSize: 14,
-    fontWeight: "700",
   },
 });
-
-export default ContratanteHomeScreen;

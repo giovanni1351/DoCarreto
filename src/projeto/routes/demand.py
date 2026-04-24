@@ -43,7 +43,9 @@ async def post_demand(
 @router.get("/")
 async def get_demand(
     session: AsyncSessionDep,
-    current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
+    current_user: Annotated[
+        User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA, UserTypes.ENTREGADOR]))
+    ],
 ) -> list[Demand]:
     return list((await session.exec(select(Demand))).fetchall())
 
