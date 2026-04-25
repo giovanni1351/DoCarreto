@@ -73,6 +73,7 @@ export default function DemandaDetalhe() {
   const [isLoadingCands, setIsLoadingCands] = useState(false);
   const [isCandidating, setIsCandidating] = useState(false);
   const [hasCandidated, setHasCandidated] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   const isMotorista   = user?.tipo_user === "ENTREGADOR";
   const isContratante = user?.tipo_user === "CRIADOR_DEMANDA";
@@ -134,6 +135,41 @@ export default function DemandaDetalhe() {
   useEffect(() => {
     if (isMotorista) checkMinhaCandidatura();
   }, [isMotorista, checkMinhaCandidatura]);
+
+    // ── cancelar demanda ────────────────────────────────────────────────────────
+  const handleCancelarDemanda = async () => {
+    if (!token || !demand) return;
+
+    Alert.alert(
+      "Cancelar demanda",
+      "Tem certeza que deseja cancelar esta demanda?",
+      //Givas deixei comentado aqui, pois aqui é a integracao com api, mas nao temos a funcao cancelDemand ainda la /lib/api.ts
+      // [
+      //   { text: "Cancelar", style: "cancel" },
+      //   {
+      //     text: "Sim, cancelar",
+      //     style: "destructive",
+      //     onPress: async () => {
+      //       setIsCanceling(true);
+      //       try {
+      //         await cancelDemand(token, demand.id);
+      //         Alert.alert(
+      //           "Demanda cancelada",
+      //           "A demanda foi cancelada com sucesso."
+      //         );
+      //         router.back();
+      //       } catch (error) {
+      //         if (error instanceof ApiError)
+      //           Alert.alert("Erro", error.message);
+      //         else Alert.alert("Erro", "Não foi possível cancelar a demanda.");
+      //       } finally {
+      //         setIsCanceling(false);
+      //       }
+      //     },
+      //   },
+      // ]
+    );
+  };
 
   // ── candidatar ──────────────────────────────────────────────────────────────
   const handleCandidatar = async () => {
@@ -278,6 +314,25 @@ export default function DemandaDetalhe() {
             )}
           </View>
         )}
+
+        {/* ── Botão cancelar demanda (contratante) ── */}
+        {isContratante && (demand.status === "aberta" || demand.status === "em_andamento") && (
+          <TouchableOpacity
+            style={[styles.cancelarBtn, isCanceling && styles.cancelarBtnDisabled]}
+            onPress={handleCancelarDemanda}
+            disabled={isCanceling}
+          >
+            {isCanceling ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="close-circle-outline" size={18} color="#fff" />
+                <Text style={styles.cancelarBtnText}>Cancelar demanda</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+
 
         {/* ── Candidatar / status (motorista) ── */}
         {isMotorista && demand.status === "aberta" && !hasCandidated && (
@@ -705,4 +760,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   minhaCandLinkText: { color: "#2563eb", fontSize: 13, fontWeight: "600" },
+
+  //cancelar Demanda button
+  cancelarBtn: {
+    backgroundColor: "#dc2626",
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  cancelarBtnDisabled: { backgroundColor: "#94a3b8" },
+  cancelarBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 }
 });
