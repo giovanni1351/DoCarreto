@@ -126,7 +126,7 @@ async def atualizar_demanda(
     current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
 ) -> Demand:
     """
-    Atualizar registros da demanda
+    Atualizar registros da demanda.
     """
     demand = (await session.exec(select(Demand).where(Demand.id == demanda_id))).first()
     if not demand:
