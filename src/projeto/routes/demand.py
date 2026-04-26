@@ -4,7 +4,7 @@ from uuid import UUID
 from auth import UserByRole, get_current_user
 from database import AsyncSessionDep
 from fastapi import APIRouter, Depends, HTTPException, status
-from schemas.demand import Demand, DemandCreate, DemandStatus
+from schemas.demand import Demand, DemandCreate, DemandStatus, DemandUpdate
 from schemas.user import User, UserTypes
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -118,3 +118,52 @@ async def aceitar_demanda(
 
     return demand
 
+@router.put("/{demanda_id}")
+async def atualizar_demanda(
+    demanda_id : UUID,
+    demanda_update : DemandUpdate,
+    session: AsyncSessionDep,
+    current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
+) -> Demand:
+    """
+    Atualizar registros da demanda
+    """
+    demand = (await session.exec(select(Demand).where(Demand.id == demanda_id))).first()
+    if not demand:
+        raise HTTPException(status_code=404, detail="Demanda não encontrada")
+    
+    if demand.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Você não é o dono da demanda para cancelar",
+        )
+    
+    if demanda_update.title is not None:
+        demand.title = demanda_update.title
+    if demanda_update.description is not None:
+        demand.description = demanda_update.description
+    if demanda_update.endereco_origem is not None:
+        demand.endereco_origem = demanda_update.endereco_origem
+    if demanda_update.lat_origem is not None:
+        demand.lat_origem = demanda_update.lat_origem
+    if demanda_update.lon_origem is not None:
+        demand.lon_origem = demanda_update.lon_origem
+    if demanda_update.endereco_destino is not None:
+        demand.endereco_destino = demanda_update.endereco_destino
+    if demanda_update.lat_destino is not None:
+       demand.lat_destino = demanda_update.lat_destino
+    if demanda_update.lon_destino is not None:
+        demand.lon_destino = demanda_update.lon_destino
+    if demanda_update.valor_proposto is not None:
+        demand.valor_proposto = demanda_update.valor_proposto
+    if demanda_update.peso_carga_kg is not None:
+        demand.peso_carga_kg = demanda_update.peso_carga_kg
+    if demanda_update.status is not None:
+        demand.status = demanda_update.status
+    if demanda_update.data_coleta is not None:
+        demand.data_coleta = demanda_update.data_coleta
+    session.add(demand)
+    await session.commit()
+    await session.refresh(demand)
+
+    return demand
