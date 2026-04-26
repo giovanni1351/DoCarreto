@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
+from pydantic import field_validator,BaseModel
 from sqlmodel import Field, SQLModel  # pyright: ignore[reportUnknownVariableType]
 
 """
@@ -62,3 +62,19 @@ class Demand(DemandCreate, table=True):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime | None = Field(default=None)
     deleted_at: datetime | None = Field(default=None)
+
+class DemandUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    endereco_origem: str | None = None
+    lat_origem: float | None = None
+    lon_origem: float | None = None
+    endereco_destino: str | None = None
+    lat_destino: float | None = None
+    lon_destino: float | None = None
+    valor_proposto: float | None = None
+    peso_carga_kg: float | None = None
+    status: DemandStatus | None = None
+    data_coleta: datetime | None = None
+
+
