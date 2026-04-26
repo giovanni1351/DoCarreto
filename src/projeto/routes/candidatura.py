@@ -10,12 +10,13 @@ from schemas.candidatura import (
     CandidaturaCreate,
     CandidaturaEntregadorInfo,
     CandidaturaPublic,
+    CandidaturaStatus,
     DemandaResumo,
 )
-from schemas.demand import Demand
+from schemas.demand import Demand, DemandStatus
 from schemas.entregador import Entregador
 from schemas.user import User, UserTypes
-from sqlmodel import select
+from sqlmodel import col, select
 
 router = APIRouter(prefix="/candidatura", tags=["Candidatura"])
 
@@ -95,12 +96,12 @@ async def listar_candidaturas(
     """
     Lista os candidatos de uma demanda. Apenas o dono da demanda pode consultar.
     """
-    demand = (
-        await session.exec(select(Demand).where(Demand.id == demanda_id))
-    ).first()
+    demand = (await session.exec(select(Demand).where(Demand.id == demanda_id))).first()
 
     if not demand:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Demanda não encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Demanda não encontrada"
+        )
 
     if demand.user_id != current_user.id and not current_user.is_admin:
         raise HTTPException(
@@ -122,7 +123,9 @@ async def listar_candidaturas(
             await session.exec(select(User).where(User.id == cand.entregador_id))
         ).first()
         entregador = (
-            await session.exec(select(Entregador).where(Entregador.id == cand.entregador_id))
+            await session.exec(
+                select(Entregador).where(Entregador.id == cand.entregador_id)
+            )
         ).first()
 
         if not entregador_user or not entregador:
@@ -149,3 +152,39 @@ async def listar_candidaturas(
 
     return result
 
+
+@router.put("/aceitar/{candidatura_id}")
+async def aceitar_candidatura(
+    id_candidatura: UUID,
+    session: AsyncSessionDep,
+    current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
+) -> Candidatura:
+    candidatura = (
+        await session.exec(
+            select(Candidatura).where(col(Candidatura.id) == id_candidatura)
+        )
+    ).first()
+    if not candidatura:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidatura não encontrada"
+        )
+    demand = (
+        await session.exec(
+            select(Demand).where(col(Demand.id) == candidatura.demanda_id)
+        )
+    ).first()
+    if not demand:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Candidatura não encontrada"
+        )
+    if demand.status == DemandStatus.EM_ANDAMENTO:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Demanda ja em andamento"
+        )
+    candidatura.status = CandidaturaStatus.ACEITA
+    demand.status = DemandStatus.EM_ANDAMENTO
+    session.add(candidatura)
+
+    await session.commit()
+
+    return candidatura
