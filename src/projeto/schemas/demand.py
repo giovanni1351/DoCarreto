@@ -78,3 +78,18 @@ class DemandUpdate(BaseModel):
     data_coleta: datetime | None = None
 
 
+class DemandPublic(BaseModel):
+    title: str
+    description: str
+    endereco_origem: str
+    lat_origem: float
+    lon_origem: float
+    endereco_destino: str
+    lat_destino: float
+    lon_destino: float
+    valor_proposto: float
+    peso_carga_kg: float
+    status: DemandStatus
+    data_coleta: datetime
+
+
