@@ -11,8 +11,10 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   ApiError,
+  aceitarCandidatura,
   cancelDemand,
   CandidaturaItem,
   CandidaturaMinha,
@@ -75,6 +77,17 @@ export default function DemandaDetalhe() {
   const [isCandidating, setIsCandidating] = useState(false);
   const [hasCandidated, setHasCandidated] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isAceitando, setIsAceitando] = useState<string | null>(null);
+
+  type DialogConfig = {
+    title: string;
+    message: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => void;
+  };
+  const [dialog, setDialog] = useState<DialogConfig | null>(null);
+  const closeDialog = () => setDialog(null);
 
   const isMotorista   = user?.tipo_user === "ENTREGADOR";
   const isContratante = user?.tipo_user === "CRIADOR_DEMANDA";
@@ -138,37 +151,53 @@ export default function DemandaDetalhe() {
   }, [isMotorista, checkMinhaCandidatura]);
 
     // ── cancelar demanda ────────────────────────────────────────────────────────
-  const handleCancelarDemanda = async () => {
+  const handleCancelarDemanda = () => {
     if (!token || !demand) return;
+    setDialog({
+      title: "Cancelar demanda",
+      message: "Tem certeza que deseja cancelar esta demanda?",
+      confirmLabel: "Sim, cancelar",
+      destructive: true,
+      onConfirm: async () => {
+        closeDialog();
+        setIsCanceling(true);
+        try {
+          await cancelDemand(token, demand.id);
+          Alert.alert("Demanda cancelada", "A demanda foi cancelada com sucesso.");
+          router.back();
+        } catch (error) {
+          if (error instanceof ApiError) Alert.alert("Erro", error.message);
+          else Alert.alert("Erro", "Não foi possível cancelar a demanda.");
+        } finally {
+          setIsCanceling(false);
+        }
+      },
+    });
+  };
 
-    Alert.alert(
-      "Cancelar demanda",
-      "Tem certeza que deseja cancelar esta demanda?",
-      [
-        { text: "Voltar", style: "cancel" },
-        {
-          text: "Sim, cancelar",
-          style: "destructive",
-          onPress: async () => {
-            setIsCanceling(true);
-            try {
-              await cancelDemand(token, demand.id);
-              Alert.alert(
-                "Demanda cancelada",
-                "A demanda foi cancelada com sucesso."
-              );
-              router.back();
-            } catch (error) {
-              if (error instanceof ApiError)
-                Alert.alert("Erro", error.message);
-              else Alert.alert("Erro", "Não foi possível cancelar a demanda.");
-            } finally {
-              setIsCanceling(false);
-            }
-          },
-        },
-      ]
-    );
+  // ── aceitar candidatura ─────────────────────────────────────────────────────
+  const handleAceitarCandidatura = (candidaturaId: string) => {
+    if (!token) return;
+    setDialog({
+      title: "Aceitar candidatura",
+      message: "Deseja aceitar este candidato? A demanda será marcada como em andamento.",
+      confirmLabel: "Aceitar",
+      onConfirm: async () => {
+        closeDialog();
+        setIsAceitando(candidaturaId);
+        try {
+          await aceitarCandidatura(token, candidaturaId);
+          Alert.alert("Candidatura aceita!", "O motorista foi selecionado.");
+          await fetchDemand();
+          await fetchCandidaturas();
+        } catch (error) {
+          if (error instanceof ApiError) Alert.alert("Erro", error.message);
+          else Alert.alert("Erro", "Não foi possível aceitar a candidatura.");
+        } finally {
+          setIsAceitando(null);
+        }
+      },
+    });
   };
 
   // ── candidatar ──────────────────────────────────────────────────────────────
@@ -206,6 +235,15 @@ export default function DemandaDetalhe() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <ConfirmDialog
+        visible={!!dialog}
+        title={dialog?.title ?? ""}
+        message={dialog?.message ?? ""}
+        confirmLabel={dialog?.confirmLabel}
+        destructive={dialog?.destructive}
+        onConfirm={dialog?.onConfirm ?? closeDialog}
+        onCancel={closeDialog}
+      />
       {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -309,7 +347,13 @@ export default function DemandaDetalhe() {
               </View>
             ) : (
               candidaturas.map((cand) => (
-                <CandidaturaCard key={cand.id} cand={cand} />
+                <CandidaturaCard
+                  key={cand.id}
+                  cand={cand}
+                  demandStatus={demand.status}
+                  onAceitar={handleAceitarCandidatura}
+                  isAceitando={isAceitando === cand.id}
+                />
               ))
             )}
           </View>
@@ -431,7 +475,17 @@ function MinhaCandidaturaStatus({
 
 // ── CandidaturaCard ───────────────────────────────────────────────────────────
 
-function CandidaturaCard({ cand }: { cand: CandidaturaItem }) {
+function CandidaturaCard({
+  cand,
+  demandStatus,
+  onAceitar,
+  isAceitando,
+}: {
+  cand: CandidaturaItem;
+  demandStatus: DemandStatus;
+  onAceitar: (id: string) => void;
+  isAceitando: boolean;
+}) {
   const cfg = CAND_STATUS_CONFIG[cand.status] ?? {
     label: cand.status,
     color: "#334155",
@@ -504,6 +558,24 @@ function CandidaturaCard({ cand }: { cand: CandidaturaItem }) {
         Candidatou-se em{" "}
         {new Date(cand.created_at).toLocaleDateString("pt-BR")}
       </Text>
+
+      {/* aceitar */}
+      {cand.status === "pendente" && demandStatus === "aberta" && (
+        <TouchableOpacity
+          style={[styles.aceitarBtn, isAceitando && styles.aceitarBtnDisabled]}
+          onPress={() => onAceitar(cand.id)}
+          disabled={isAceitando}
+        >
+          {isAceitando ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="check-circle-outline" size={16} color="#fff" />
+              <Text style={styles.aceitarBtnText}>Aceitar candidato</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -773,5 +845,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   cancelarBtnDisabled: { backgroundColor: "#94a3b8" },
-  cancelarBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 }
+  cancelarBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
+  // aceitar candidatura button
+  aceitarBtn: {
+    backgroundColor: "#16a34a",
+    borderRadius: 8,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  aceitarBtnDisabled: { backgroundColor: "#94a3b8" },
+  aceitarBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });

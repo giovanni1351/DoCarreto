@@ -156,13 +156,13 @@ async def listar_candidaturas(
 
 @router.put("/aceitar/{candidatura_id}")
 async def aceitar_candidatura(
-    id_candidatura: UUID,
+    candidatura_id: UUID,
     session: AsyncSessionDep,
     current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
 ) -> Chat:
     candidatura = (
         await session.exec(
-            select(Candidatura).where(col(Candidatura.id) == id_candidatura)
+            select(Candidatura).where(col(Candidatura.id) == candidatura_id)
         )
     ).first()
     if not candidatura:

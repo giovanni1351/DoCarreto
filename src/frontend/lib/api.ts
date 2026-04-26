@@ -51,6 +51,12 @@ export type DemandStatus = "aberta" | "em_andamento" | "concluida" | "cancelada"
 
 export type CandidaturaStatus = "pendente" | "aceita" | "recusada";
 
+export type Chat = {
+  id: string;
+  candidatura_id: string;
+  created_at: string;
+};
+
 export type CandidaturaEntregadorInfo = {
   id: string;
   nome: string | null;
@@ -266,4 +272,8 @@ export async function listMyCandidaturas(token: string) {
 
 export async function cancelDemand(token: string, demandId: string) {
   return request<Demand>(`/demand/cancelar/${demandId}`, { method: "PUT", token });
+}
+
+export async function aceitarCandidatura(token: string, candidaturaId: string) {
+  return request<Chat>(`/candidatura/aceitar/${candidaturaId}`, { method: "PUT", token });
 }
