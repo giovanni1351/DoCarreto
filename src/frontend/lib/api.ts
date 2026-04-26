@@ -107,7 +107,7 @@ export type Demand = {
 };
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   token?: string | null;
   body?: unknown;
   headers?: Record<string, string>;
@@ -262,4 +262,8 @@ export async function listCandidaturas(token: string, demandaId: string) {
 
 export async function listMyCandidaturas(token: string) {
   return request<CandidaturaMinha[]>("/candidatura/minhas", { token });
+}
+
+export async function cancelDemand(token: string, demandId: string) {
+  return request<Demand>(`/demand/cancelar/${demandId}`, { method: "PUT", token });
 }

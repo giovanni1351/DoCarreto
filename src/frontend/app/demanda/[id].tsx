@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import {
   ApiError,
+  cancelDemand,
   CandidaturaItem,
   CandidaturaMinha,
   CandidaturaStatus,
@@ -143,31 +144,30 @@ export default function DemandaDetalhe() {
     Alert.alert(
       "Cancelar demanda",
       "Tem certeza que deseja cancelar esta demanda?",
-      //Givas deixei comentado aqui, pois aqui é a integracao com api, mas nao temos a funcao cancelDemand ainda la /lib/api.ts
-      // [
-      //   { text: "Cancelar", style: "cancel" },
-      //   {
-      //     text: "Sim, cancelar",
-      //     style: "destructive",
-      //     onPress: async () => {
-      //       setIsCanceling(true);
-      //       try {
-      //         await cancelDemand(token, demand.id);
-      //         Alert.alert(
-      //           "Demanda cancelada",
-      //           "A demanda foi cancelada com sucesso."
-      //         );
-      //         router.back();
-      //       } catch (error) {
-      //         if (error instanceof ApiError)
-      //           Alert.alert("Erro", error.message);
-      //         else Alert.alert("Erro", "Não foi possível cancelar a demanda.");
-      //       } finally {
-      //         setIsCanceling(false);
-      //       }
-      //     },
-      //   },
-      // ]
+      [
+        { text: "Voltar", style: "cancel" },
+        {
+          text: "Sim, cancelar",
+          style: "destructive",
+          onPress: async () => {
+            setIsCanceling(true);
+            try {
+              await cancelDemand(token, demand.id);
+              Alert.alert(
+                "Demanda cancelada",
+                "A demanda foi cancelada com sucesso."
+              );
+              router.back();
+            } catch (error) {
+              if (error instanceof ApiError)
+                Alert.alert("Erro", error.message);
+              else Alert.alert("Erro", "Não foi possível cancelar a demanda.");
+            } finally {
+              setIsCanceling(false);
+            }
+          },
+        },
+      ]
     );
   };
 
