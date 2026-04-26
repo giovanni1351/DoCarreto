@@ -4,7 +4,7 @@ from auth import UserByRole
 from database import AsyncSessionDep
 from fastapi import APIRouter, Depends, HTTPException, status
 from schemas.criador_demanda import CriadorDemanda
-from schemas.demand import Demand
+from schemas.demand import Demand, DemandStatus
 from schemas.user import User, UserTypes
 from sqlmodel import col, select
 
@@ -37,7 +37,7 @@ async def pegar_minhas_demandas(
     current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
 ) -> list[Demand]:
     demands = (
-        await session.exec(select(Demand).where(col(Demand.user_id) == current_user.id))
+        await session.exec(select(Demand).where(col(Demand.user_id) == current_user.id, Demand.status != DemandStatus.CANCELADA))
     ).all()
     return list(demands)
 

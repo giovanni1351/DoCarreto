@@ -47,7 +47,7 @@ async def get_demand(
         User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA, UserTypes.ENTREGADOR]))
     ],
 ) -> list[Demand]:
-    return list((await session.exec(select(Demand))).fetchall())
+    return list((await session.exec(select(Demand).where(Demand.status != DemandStatus.CANCELADA))).fetchall())
 
 
 @router.get("/{demand_id}")
@@ -117,3 +117,4 @@ async def aceitar_demanda(
     await session.refresh(demand)
 
     return demand
+
