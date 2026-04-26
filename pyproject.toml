@@ -28,7 +28,7 @@ pylogkit = { git = "https://github.com/luizomf/pylogkit" }
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
-include = ["src", 'tests']
+include = ["src/projeto", 'tests']
 exclude = [
     "**/venv",
     "**/.venv",
@@ -39,7 +39,7 @@ exclude = [
 ]
 venv = ".venv"
 venvPath = "."
-executionEnvironments = [{ root = "src" }]
+executionEnvironments = [{ root = "src/projeto" }]
 
 [tool.ruff]
 line-length = 88

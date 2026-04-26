@@ -51,4 +51,4 @@ async def health() -> dict[str, Literal["Ok"]]:
 
 
 if __name__ == "__main__":
-    run("app:app", reload=True)
+    run("app:app", reload=True, host="0.0.0.0", port=8000)

@@ -1,5 +1,5 @@
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from auth import UserByRole
 from database import AsyncSessionDep
@@ -13,6 +13,7 @@ from schemas.candidatura import (
     CandidaturaStatus,
     DemandaResumo,
 )
+from schemas.chat import Chat
 from schemas.demand import Demand, DemandStatus
 from schemas.entregador import Entregador
 from schemas.user import User, UserTypes
@@ -158,7 +159,7 @@ async def aceitar_candidatura(
     id_candidatura: UUID,
     session: AsyncSessionDep,
     current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
-) -> Candidatura:
+) -> Chat:
     candidatura = (
         await session.exec(
             select(Candidatura).where(col(Candidatura.id) == id_candidatura)
@@ -188,8 +189,11 @@ async def aceitar_candidatura(
         )
     candidatura.status = CandidaturaStatus.ACEITA
     demand.status = DemandStatus.EM_ANDAMENTO
+    chat = Chat(id=uuid4(), candidatura_id=candidatura.id)
     session.add(candidatura)
+    session.add(chat)
+    session.add(demand)
 
     await session.commit()
 
-    return candidatura
+    return chat
