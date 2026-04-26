@@ -74,7 +74,6 @@ class DemandUpdate(BaseModel):
     lon_destino: float | None = None
     valor_proposto: float | None = None
     peso_carga_kg: float | None = None
-    status: DemandStatus | None = None
     data_coleta: datetime | None = None
 
 

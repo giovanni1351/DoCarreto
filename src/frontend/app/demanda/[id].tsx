@@ -359,6 +359,17 @@ export default function DemandaDetalhe() {
           </View>
         )}
 
+        {/* ── Botão atualizar demanda (contratante) ── */}
+        {isContratante && (demand.status === "aberta" || demand.status === "em_andamento") && (
+          <TouchableOpacity
+            style={[styles.atualizarBtn]}
+            onPress={() => router.push(`/editar-demanda?id=${demand.id}`)}
+          >
+            <MaterialCommunityIcons name="pencil-outline" size={18} color="#fff" />
+            <Text style={styles.atualizarBtnText}>Atualizar demanda</Text>
+          </TouchableOpacity>
+        )}
+
         {/* ── Botão cancelar demanda (contratante) ── */}
         {isContratante && (demand.status === "aberta" || demand.status === "em_andamento") && (
           <TouchableOpacity
@@ -800,6 +811,19 @@ const styles = StyleSheet.create({
   },
   candidatarBtnDisabled: { backgroundColor: "#94a3b8" },
   candidatarBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
+  // atualizar demanda button
+  atualizarBtn: {
+    backgroundColor: "#2427dd",
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  atualizarBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 
   closedNotice: {
     flexDirection: "row",

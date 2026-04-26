@@ -158,8 +158,6 @@ async def atualizar_demanda(
         demand.valor_proposto = demanda_update.valor_proposto
     if demanda_update.peso_carga_kg is not None:
         demand.peso_carga_kg = demanda_update.peso_carga_kg
-    if demanda_update.status is not None:
-        demand.status = demanda_update.status
     if demanda_update.data_coleta is not None:
         demand.data_coleta = demanda_update.data_coleta
     session.add(demand)

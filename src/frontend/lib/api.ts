@@ -240,6 +240,27 @@ export async function createDemand(
   return request<Demand>("/demand/", { method: "POST", token, body: payload });
 }
 
+export async function updateDemand(
+  token: string,
+  demandId: string,
+  payload: {
+    title?: string;
+    description?: string;
+    endereco_origem?: string;
+    lat_origem?: number;
+    lon_origem?: number;
+    endereco_destino?: string;
+    lat_destino?: number;
+    lon_destino?: number;
+    valor_proposto?: number;
+    peso_carga_kg?: number;
+    status?: DemandStatus;
+    data_coleta?: string | null;
+  }
+) {
+  return request<Demand>(`/demand/${demandId}`, { method: "PUT", token, body: payload });
+}
+
 export async function listDemands(token: string) {
   return request<Demand[]>("/demand/", { token });
 }
