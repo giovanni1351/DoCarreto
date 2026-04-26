@@ -181,6 +181,11 @@ async def aceitar_candidatura(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Demanda ja em andamento"
         )
+    if demand.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Não pertencente ao usuario",
+        )
     candidatura.status = CandidaturaStatus.ACEITA
     demand.status = DemandStatus.EM_ANDAMENTO
     session.add(candidatura)
