@@ -7,7 +7,8 @@ import schemas as schemas
 from alembic import context
 from database import generate_connection_string
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
+from dotenv import load_dotenv
+load_dotenv()
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -260,6 +260,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "pylogkit" },
+    { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "sqlmodel" },
     { name = "tzdata" },
@@ -278,6 +279,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.11.0" },
     { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "pylogkit", git = "https://github.com/luizomf/pylogkit" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "sqlmodel", specifier = ">=0.0.27" },
     { name = "tzdata", specifier = ">=2025.2" },

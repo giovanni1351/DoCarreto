@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from pylogkit import get_logger
-
+from dotenv import load_dotenv
+load_dotenv()
 
 class Settings(BaseSettings):
     DB_USER: str
