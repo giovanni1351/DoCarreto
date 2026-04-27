@@ -3,7 +3,9 @@ from enum import Enum
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
-from sqlmodel import Field, SQLModel  # pyright: ignore[reportUnknownVariableType]
+from sqlmodel import Field, SQLModel  # type: ignore
+
+from schemas.demand import DemandStatus  # pyright: ignore[reportUnknownVariableType]
 
 
 class CandidaturaStatus(Enum):
@@ -49,7 +51,7 @@ class DemandaResumo(BaseModel):
     title: str
     endereco_origem: str
     endereco_destino: str
-    status: str
+    status: DemandStatus
     valor_proposto: float
     peso_carga_kg: float
 

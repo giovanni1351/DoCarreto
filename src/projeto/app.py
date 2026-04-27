@@ -3,7 +3,16 @@ from typing import Any, Literal
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # ← ADICIONE ESTA LINHA
 from fastapi.openapi.utils import get_openapi
-from routes import candidatura, criador_demanda, demand, entregador, token, user
+from routes import (
+    candidatura,
+    chat,
+    criador_demanda,
+    demand,
+    entregador,
+    mensagens,
+    token,
+    user,
+)
 from uvicorn import run
 
 app = FastAPI()
@@ -23,6 +32,8 @@ app.include_router(demand.router)
 app.include_router(entregador.router)
 app.include_router(criador_demanda.router)
 app.include_router(candidatura.router)
+app.include_router(chat.router)
+app.include_router(mensagens.router)
 
 
 def custom_openapi() -> dict[str, Any]:

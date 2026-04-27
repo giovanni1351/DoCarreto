@@ -37,7 +37,12 @@ async def pegar_minhas_demandas(
     current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
 ) -> list[Demand]:
     demands = (
-        await session.exec(select(Demand).where(col(Demand.user_id) == current_user.id, Demand.status != DemandStatus.CANCELADA))
+        await session.exec(
+            select(Demand).where(
+                col(Demand.user_id) == current_user.id,
+                Demand.status != DemandStatus.CANCELADA,
+            )
+        )
     ).all()
     return list(demands)
 

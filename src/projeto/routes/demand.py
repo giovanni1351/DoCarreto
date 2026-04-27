@@ -80,7 +80,8 @@ async def cancelar_demanda(
     """
     demand = (await session.exec(select(Demand).where(Demand.id == demanda_id))).first()
     if not demand:
-        raise HTTPException(status_code=404, detail="Demanda não encontrada")
+        msg = "Demanda não encontrada"
+        raise HTTPException(status_code=404, detail=msg)
 
     if demand.user_id != current_user.id and not current_user.is_admin:
         raise HTTPException(
