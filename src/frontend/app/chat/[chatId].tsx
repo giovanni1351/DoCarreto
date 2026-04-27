@@ -12,9 +12,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { createChatWebSocket, type ChatEvent, type Mensagem } from "@/lib/api";
+import {
+  createChatWebSocket,
+  getChatById,
+  type Chat,
+  type ChatEvent,
+  type Mensagem,
+} from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export default function ChatScreen() {
@@ -22,6 +28,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
 
+  const [chatInfo, setChatInfo] = useState<Chat | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [texto, setTexto] = useState("");
   const [conectado, setConectado] = useState(false);
@@ -29,6 +36,12 @@ export default function ChatScreen() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const flatListRef = useRef<FlatList<Mensagem>>(null);
+
+  // ── Buscar informações do chat (nomes, demanda) ──────────────────────────
+  useEffect(() => {
+    if (!token || !chatId) return;
+    getChatById(token, chatId).then(setChatInfo).catch(() => undefined);
+  }, [token, chatId]);
 
   // ── Conectar WebSocket ───────────────────────────────────────────────────
   useEffect(() => {
@@ -48,11 +61,9 @@ export default function ChatScreen() {
 
         if (event.tipo === "mensagem") {
           setMensagens((prev) => {
-            // Evitar duplicatas (histórico vs broadcast)
             if (prev.find((m) => m.id === event.id)) return prev;
             return [...prev, event];
           });
-          // Scroll para o final
           setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80);
         }
 
@@ -89,10 +100,18 @@ export default function ChatScreen() {
   const enviar = () => {
     const conteudo = texto.trim();
     if (!conteudo || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-
     wsRef.current.send(JSON.stringify({ conteudo }));
     setTexto("");
   };
+
+  // ── Participantes ────────────────────────────────────────────────────────
+  const isEntregador = user?.tipo_user === "ENTREGADOR";
+  const outroNome = chatInfo
+    ? isEntregador
+      ? (chatInfo.criador_nome ?? "Contratante")
+      : (chatInfo.entregador_nome ?? "Entregador")
+    : null;
+  const outroLabel = isEntregador ? "Contratante" : "Entregador";
 
   // ── Render item ──────────────────────────────────────────────────────────
   const renderMensagem = ({ item, index }: { item: Mensagem; index: number }) => {
@@ -123,8 +142,8 @@ export default function ChatScreen() {
               {isMinha && (
                 <Ionicons
                   name={item.lida ? "checkmark-done" : "checkmark"}
-                  size={13}
-                  color={item.lida ? "#60a5fa" : "rgba(255,255,255,0.6)"}
+                  size={14}
+                  color={item.lida ? "#ffffff" : "rgba(255,255,255,0.5)"}
                   style={{ marginLeft: 3 }}
                 />
               )}
@@ -138,23 +157,60 @@ export default function ChatScreen() {
   // ── UI ───────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
+
+        {/* Avatar + nome */}
+        <View style={styles.headerAvatar}>
+          <Text style={styles.headerAvatarText}>
+            {(outroNome ?? outroLabel).charAt(0).toUpperCase()}
+          </Text>
+        </View>
+
         <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            Chat do frete
+          <Text style={styles.headerName} numberOfLines={1}>
+            {outroNome ?? outroLabel}
           </Text>
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, conectado ? styles.statusOnline : styles.statusOffline]} />
             <Text style={styles.statusText}>{conectado ? "Conectado" : "Reconectando..."}</Text>
           </View>
         </View>
+
+        {/* Botão ir para demanda */}
+        {chatInfo?.demanda_id && (
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => router.push(`/demanda/${chatInfo.demanda_id}`)}
+          >
+            <MaterialCommunityIcons name="package-variant-closed" size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Erro de conexão */}
+      {/* ── Banner da demanda ── */}
+      {chatInfo && (
+        <TouchableOpacity
+          style={styles.demandaBanner}
+          onPress={() => router.push(`/demanda/${chatInfo.demanda_id}`)}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="map-marker-path" size={14} color="#2563eb" />
+          <Text style={styles.demandaBannerText} numberOfLines={1}>
+            {chatInfo.demanda_titulo}
+          </Text>
+          <Text style={styles.demandaBannerRoute} numberOfLines={1}>
+            {chatInfo.demanda_origem} → {chatInfo.demanda_destino}
+          </Text>
+          <Ionicons name="chevron-forward" size={14} color="#94a3b8" style={{ marginLeft: "auto" }} />
+        </TouchableOpacity>
+      )}
+
+      {/* ── Erro de conexão ── */}
       {erro && (
         <View style={styles.erroBanner}>
           <Ionicons name="warning-outline" size={15} color="#92400e" />
@@ -162,7 +218,7 @@ export default function ChatScreen() {
         </View>
       )}
 
-      {/* Lista de mensagens */}
+      {/* ── Lista de mensagens ── */}
       {!conectado && mensagens.length === 0 ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#2563eb" />
@@ -186,7 +242,7 @@ export default function ChatScreen() {
         />
       )}
 
-      {/* Input de envio */}
+      {/* ── Input de envio ── */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
@@ -201,6 +257,16 @@ export default function ChatScreen() {
             multiline
             maxLength={1000}
             returnKeyType="default"
+            onKeyPress={
+              Platform.OS === "web"
+                ? (e: any) => {
+                    if (e.nativeEvent.key === "Enter" && !e.nativeEvent.shiftKey) {
+                      e.preventDefault?.();
+                      enviar();
+                    }
+                  }
+                : undefined
+            }
           />
           <TouchableOpacity
             style={[styles.sendBtn, !texto.trim() && styles.sendBtnDisabled]}
@@ -238,15 +304,17 @@ function formatarData(iso: string) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f1f5f9" },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+
+  // Header
   header: {
     backgroundColor: "#0f172a",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
-  backBtn: {
+  headerBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -254,13 +322,48 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
+  headerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#1e40af",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  headerAvatarText: { fontSize: 17, fontWeight: "700", color: "#fff" },
   headerInfo: { flex: 1 },
-  headerTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  headerName: { color: "#fff", fontSize: 15, fontWeight: "700" },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusOnline: { backgroundColor: "#4ade80" },
   statusOffline: { backgroundColor: "#f87171" },
   statusText: { color: "#cbd5e1", fontSize: 11 },
+
+  // Banner da demanda
+  demandaBanner: {
+    backgroundColor: "#eff6ff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#bfdbfe",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  demandaBannerText: {
+    fontWeight: "700",
+    fontSize: 13,
+    color: "#1e40af",
+    flex: 1,
+  },
+  demandaBannerRoute: {
+    fontSize: 11,
+    color: "#3b82f6",
+    flex: 2,
+  },
+
+  // Erro
   erroBanner: {
     backgroundColor: "#fef3c7",
     paddingHorizontal: 14,
@@ -272,6 +375,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#fde68a",
   },
   erroText: { color: "#92400e", fontSize: 13, flex: 1 },
+
+  // Mensagens
   listContent: { padding: 14, gap: 2, paddingBottom: 10 },
   msgRow: { flexDirection: "row", marginVertical: 2 },
   msgRowMinha: { justifyContent: "flex-end" },
@@ -283,20 +388,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   bubbleMinha: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#1d4ed8",
     borderBottomRightRadius: 4,
   },
   bubbleDela: {
-    backgroundColor: "#fff",
+    backgroundColor: "#e2e8f0",
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
   },
   bubbleText: { fontSize: 14, color: "#0f172a", lineHeight: 20 },
   bubbleTextMinha: { color: "#fff" },
   msgMeta: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginTop: 3 },
-  msgTime: { fontSize: 10, color: "#64748b" },
-  msgTimeMinha: { color: "rgba(255,255,255,0.65)" },
+  msgTime: { fontSize: 10, color: "#475569" },
+  msgTimeMinha: { color: "rgba(255,255,255,0.8)" },
+
   dataSeparator: { alignItems: "center", marginVertical: 10 },
   dataSeparatorText: {
     fontSize: 11,
@@ -306,6 +410,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 10,
   },
+
   emptyChat: {
     flex: 1,
     alignItems: "center",
@@ -316,6 +421,8 @@ const styles = StyleSheet.create({
   emptyChatText: { fontSize: 15, fontWeight: "600", color: "#475569" },
   emptyChatSub: { fontSize: 13, color: "#94a3b8" },
   conectandoText: { color: "#475569", fontSize: 14 },
+
+  // Input
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",

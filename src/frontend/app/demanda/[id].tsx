@@ -23,8 +23,10 @@ import {
   Demand,
   DemandStatus,
   getDemandById,
+  getChatByDemandaId,
   listCandidaturas,
   listMyCandidaturas,
+  type Chat,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -70,6 +72,7 @@ export default function DemandaDetalhe() {
   const { token, user } = useAuth();
 
   const [demand, setDemand] = useState<Demand | null>(null);
+  const [chatDaDemanda, setChatDaDemanda] = useState<Chat | null>(null);
   const [candidaturas, setCandidaturas] = useState<CandidaturaItem[]>([]);
   const [minhaCandidatura, setMinhaCandidatura] = useState<CandidaturaMinha | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,6 +102,10 @@ export default function DemandaDetalhe() {
     try {
       const data = await getDemandById(token, id);
       setDemand(data);
+      // Se demanda está em andamento, tenta buscar o chat associado
+      if (data.status === "em_andamento") {
+        getChatByDemandaId(token, id).then(setChatDaDemanda).catch(() => undefined);
+      }
     } catch (error) {
       if (error instanceof ApiError) Alert.alert("Erro", error.message);
       else Alert.alert("Erro", "Não foi possível carregar a demanda.");
@@ -190,6 +197,10 @@ export default function DemandaDetalhe() {
           Alert.alert("Candidatura aceita!", "O motorista foi selecionado.");
           await fetchDemand();
           await fetchCandidaturas();
+          // Buscar o chat recém-criado pela candidatura aceita
+          if (id) {
+            getChatByDemandaId(token, id).then(setChatDaDemanda).catch(() => undefined);
+          }
         } catch (error) {
           if (error instanceof ApiError) Alert.alert("Erro", error.message);
           else Alert.alert("Erro", "Não foi possível aceitar a candidatura.");
@@ -385,6 +396,17 @@ export default function DemandaDetalhe() {
                 <Text style={styles.cancelarBtnText}>Cancelar demanda</Text>
               </>
             )}
+          </TouchableOpacity>
+        )}
+
+        {/* ── Botão ir para o chat (demanda em andamento) ── */}
+        {chatDaDemanda && (
+          <TouchableOpacity
+            style={styles.chatBtn}
+            onPress={() => router.push(`/chat/${chatDaDemanda.id}`)}
+          >
+            <Ionicons name="chatbubbles-outline" size={18} color="#fff" />
+            <Text style={styles.chatBtnText}>Abrir conversa</Text>
           </TouchableOpacity>
         )}
 
@@ -870,6 +892,19 @@ const styles = StyleSheet.create({
   },
   cancelarBtnDisabled: { backgroundColor: "#94a3b8" },
   cancelarBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
+  // chat button
+  chatBtn: {
+    backgroundColor: "#0f172a",
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  chatBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 
   // aceitar candidatura button
   aceitarBtn: {

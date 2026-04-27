@@ -404,12 +404,9 @@ export default function CreateDemandScreen() {
     try {
       await ensureCriador();
       console.info("[Demanda] Perfil criador garantido");
-      await createDemand(token, payload);
-      console.info("[Demanda] Publicação concluída");
-
-      Alert.alert("Sucesso!", "Frete publicado com sucesso.", [
-        { text: "OK", onPress: () => router.replace("/homeContratante") },
-      ]);
+      const demandCriada = await createDemand(token, payload);
+      console.info("[Demanda] Publicação concluída", demandCriada.id);
+      router.replace(`/demanda/${demandCriada.id}`);
     } catch (e) {
       console.error("[Demanda] Erro ao publicar", e);
       if (e instanceof ApiError) {

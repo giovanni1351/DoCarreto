@@ -49,18 +49,11 @@ export default function TruckerSignUpScreen() {
       await becomeEntregador(token, truckerData);
       const profile = await refreshProfile();
 
-      Alert.alert("Sucesso! 🚛", "Cadastro de caminhoneiro realizado!", [
-        {
-          text: "OK",
-          onPress: () => {
-            if (profile) {
-              router.replace(routeByUserType(profile.tipo_user));
-            } else {
-              router.replace("/homeMotorista");
-            }
-          },
-        }
-      ]);
+      if (profile) {
+        router.replace(routeByUserType(profile.tipo_user));
+      } else {
+        router.replace("/homeMotorista");
+      }
       
     } catch (error) {
       if (error instanceof ApiError) {

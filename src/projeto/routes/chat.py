@@ -8,7 +8,6 @@ from manager.conection import ConnectionManager
 from schemas.candidatura import Candidatura
 from schemas.chat import Chat, ChatPublic
 from schemas.demand import Demand
-from schemas.entregador import Entregador
 from schemas.mensagens import Mensagem
 from schemas.user import User, UserTypes
 from sqlmodel import col, or_, select
@@ -17,9 +16,37 @@ from utils.chat import autenticar_websocket, verificar_acesso_chat
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
-
 manager = ConnectionManager()
 
+
+# ---------------------------------------------------------------------------
+# Helper interno — monta ChatPublic a partir das 3 entidades
+# ---------------------------------------------------------------------------
+
+async def _build_chat_public(
+    chat: Chat,
+    candidatura: Candidatura,
+    demand: Demand,
+    session: AsyncSession,
+) -> ChatPublic:
+    entregador_user = await session.get(User, candidatura.entregador_id)
+    criador_user = await session.get(User, demand.user_id)
+    return ChatPublic(
+        id=chat.id,
+        candidatura_id=chat.candidatura_id,
+        demanda_id=candidatura.demanda_id,
+        demanda_titulo=demand.title,
+        demanda_origem=demand.endereco_origem,
+        demanda_destino=demand.endereco_destino,
+        entregador_nome=entregador_user.nome if entregador_user else None,
+        criador_nome=criador_user.nome if criador_user else None,
+        created_at=chat.created_at,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /chat/ — listar todos os chats do usuário
+# ---------------------------------------------------------------------------
 
 @router.get("/")
 async def get_all_chats(
@@ -43,27 +70,77 @@ async def get_all_chats(
         )
     ).all()
 
-    result: list[ChatPublic] = []
-    for chat, candidatura, demand in rows:
-        entregador = await session.get(Entregador, candidatura.entregador_id)
-        entregador_user = await session.get(User, candidatura.entregador_id) if entregador else None
-        criador_user = await session.get(User, demand.user_id)
+    return [await _build_chat_public(c, cand, d, session) for c, cand, d in rows]
 
-        result.append(
-            ChatPublic(
-                id=chat.id,
-                candidatura_id=chat.candidatura_id,
-                demanda_id=candidatura.demanda_id,
-                demanda_titulo=demand.title,
-                demanda_origem=demand.endereco_origem,
-                demanda_destino=demand.endereco_destino,
-                entregador_nome=entregador_user.nome if entregador_user else None,
-                criador_nome=criador_user.nome if criador_user else None,
-                created_at=chat.created_at,
+
+# ---------------------------------------------------------------------------
+# GET /chat/{chat_id} — detalhes de um chat específico
+# ---------------------------------------------------------------------------
+
+@router.get("/{chat_id}")
+async def get_chat_by_id(
+    chat_id: UUID,
+    session: AsyncSessionDep,
+    current_user: Annotated[
+        User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA, UserTypes.ENTREGADOR]))
+    ],
+) -> ChatPublic:
+    from fastapi import HTTPException, status as http_status
+
+    row = (
+        await session.exec(
+            select(Chat, Candidatura, Demand)
+            .where(
+                col(Chat.id) == chat_id,
+                or_(
+                    Demand.user_id == current_user.id,
+                    Candidatura.entregador_id == current_user.id,
+                ),
             )
+            .join(Candidatura, col(Chat.candidatura_id) == Candidatura.id)
+            .join(Demand, col(Candidatura.demanda_id) == Demand.id)
         )
+    ).first()
 
-    return result
+    if not row:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Chat não encontrado")
+
+    return await _build_chat_public(row[0], row[1], row[2], session)
+
+
+# ---------------------------------------------------------------------------
+# GET /chat/por-demanda/{demanda_id} — chat da demanda (quando em_andamento)
+# ---------------------------------------------------------------------------
+
+@router.get("/por-demanda/{demanda_id}")
+async def get_chat_por_demanda(
+    demanda_id: UUID,
+    session: AsyncSessionDep,
+    current_user: Annotated[
+        User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA, UserTypes.ENTREGADOR]))
+    ],
+) -> ChatPublic:
+    from fastapi import HTTPException, status as http_status
+
+    row = (
+        await session.exec(
+            select(Chat, Candidatura, Demand)
+            .where(
+                col(Candidatura.demanda_id) == demanda_id,
+                or_(
+                    Demand.user_id == current_user.id,
+                    Candidatura.entregador_id == current_user.id,
+                ),
+            )
+            .join(Candidatura, col(Chat.candidatura_id) == Candidatura.id)
+            .join(Demand, col(Candidatura.demanda_id) == Demand.id)
+        )
+    ).first()
+
+    if not row:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Chat não encontrado para esta demanda")
+
+    return await _build_chat_public(row[0], row[1], row[2], session)
 
 
 # ---------------------------------------------------------------------------

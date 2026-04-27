@@ -337,6 +337,14 @@ export async function listChats(token: string) {
   return request<Chat[]>("/chat/", { token });
 }
 
+export async function getChatById(token: string, chatId: string) {
+  return request<Chat>(`/chat/${chatId}`, { token });
+}
+
+export async function getChatByDemandaId(token: string, demandaId: string) {
+  return request<Chat>(`/chat/por-demanda/${demandaId}`, { token });
+}
+
 export async function listMensagens(token: string, chatId: string) {
   return request<Mensagem[]>(`/mensagens/${chatId}`, { token });
 }

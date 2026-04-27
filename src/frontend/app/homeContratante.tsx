@@ -132,12 +132,6 @@ export default function ContratanteHomeScreen() {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerBtn}
-            onPress={() => router.push("/chats")}
-          >
-            <Ionicons name="chatbubbles-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerBtn}
             onPress={() => {
               signOut();
               router.replace("/login");
@@ -204,14 +198,6 @@ export default function ContratanteHomeScreen() {
           }
         />
       )}
-
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push("/cadastro-demanda")}
-      >
-        <Ionicons name="add" size={28} color="#fff" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -314,15 +300,4 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   empty: { textAlign: "center", color: "#64748b", marginTop: 24 },
-  fab: {
-    position: "absolute",
-    right: 22,
-    bottom: 26,
-    backgroundColor: "#2563eb",
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 });
