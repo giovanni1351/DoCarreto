@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from schemas.demand import Demand, DemandCreate, DemandStatus, DemandUpdate
 from schemas.user import User, UserTypes
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlmodel import and_, col, select
 
 router = APIRouter(prefix="/demand", tags=["Demand"])
 
@@ -19,16 +19,8 @@ async def post_demand(
     current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
 ) -> Demand:
     demanda_new = Demand(**demanda.model_dump(), user_id=current_user.id)
-    # criador = (
-    #     await session.exec(
-    #         select(CriadorDemanda).where(col(CriadorDemanda.id) == current_user.id)
-    #     )
-    # ).first()
     try:
-        # if criador:
-        #     criador.total_demandas += 1
-        #     session.add(criador)
-        current_user.criador_demanda.total_demandas += 1
+        current_user.criador_demanda.total_demandas += 1  # type: ignore
         session.add(demanda_new)
         await session.commit()
         await session.refresh(demanda_new)
@@ -47,7 +39,18 @@ async def get_demand(
         User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA, UserTypes.ENTREGADOR]))
     ],
 ) -> list[Demand]:
-    return list((await session.exec(select(Demand).where(Demand.status != DemandStatus.CANCELADA))).fetchall())
+    return list(
+        (
+            await session.exec(
+                select(Demand).where(
+                    and_(
+                        col(Demand.status) != DemandStatus.CANCELADA,
+                        col(Demand.status) != DemandStatus.EM_ANDAMENTO,
+                    )
+                )
+            )
+        ).fetchall()
+    )
 
 
 @router.get("/{demand_id}")
@@ -118,10 +121,11 @@ async def aceitar_demanda(
 
     return demand
 
+
 @router.put("/{demanda_id}")
 async def atualizar_demanda(
-    demanda_id : UUID,
-    demanda_update : DemandUpdate,
+    demanda_id: UUID,
+    demanda_update: DemandUpdate,
     session: AsyncSessionDep,
     current_user: Annotated[User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA]))],
 ) -> Demand:
@@ -131,13 +135,13 @@ async def atualizar_demanda(
     demand = (await session.exec(select(Demand).where(Demand.id == demanda_id))).first()
     if not demand:
         raise HTTPException(status_code=404, detail="Demanda não encontrada")
-    
+
     if demand.user_id != current_user.id and not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Você não é o dono da demanda para cancelar",
         )
-    
+
     if demanda_update.title is not None:
         demand.title = demanda_update.title
     if demanda_update.description is not None:
@@ -151,7 +155,7 @@ async def atualizar_demanda(
     if demanda_update.endereco_destino is not None:
         demand.endereco_destino = demanda_update.endereco_destino
     if demanda_update.lat_destino is not None:
-       demand.lat_destino = demanda_update.lat_destino
+        demand.lat_destino = demanda_update.lat_destino
     if demanda_update.lon_destino is not None:
         demand.lon_destino = demanda_update.lon_destino
     if demanda_update.valor_proposto is not None:

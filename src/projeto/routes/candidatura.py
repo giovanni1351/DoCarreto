@@ -17,7 +17,7 @@ from schemas.chat import Chat
 from schemas.demand import Demand, DemandStatus
 from schemas.entregador import Entregador
 from schemas.user import User, UserTypes
-from sqlmodel import col, select
+from sqlmodel import col, delete, select
 
 router = APIRouter(prefix="/candidatura", tags=["Candidatura"])
 
@@ -193,7 +193,12 @@ async def aceitar_candidatura(
     session.add(candidatura)
     session.add(chat)
     session.add(demand)
-
+    await session.exec(
+        delete(Candidatura).where(
+            col(Candidatura.demanda_id) == demand.id,
+            col(Candidatura.id) != candidatura.id,
+        )
+    )
     await session.commit()
 
     return chat

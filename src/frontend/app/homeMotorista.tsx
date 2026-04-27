@@ -17,7 +17,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   ApiError,
   createCandidatura,
-  listDemands,
+  listEntregadorDemandas,
   type Demand,
   type DemandStatus,
 } from "@/lib/api";
@@ -50,7 +50,7 @@ export default function MotoristaHomeScreen() {
 
   const loadDemands = useCallback(async () => {
     if (!token) return;
-    const data = await listDemands(token);
+    const data = await listEntregadorDemandas(token);
     setDemands(data);
   }, [token]);
 

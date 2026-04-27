@@ -265,6 +265,10 @@ export async function listDemands(token: string) {
   return request<Demand[]>("/demand/", { token });
 }
 
+export async function listEntregadorDemandas(token: string) {
+  return request<Demand[]>("/entregador/demandas", { token });
+}
+
 export async function getDemandById(token: string, id: string) {
   return request<Demand>(`/demand/${id}`, { token });
 }

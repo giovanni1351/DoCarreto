@@ -22,3 +22,4 @@ class ChatPublic(SQLModel):
     entregador: "Entregador"
     criador_demanda: "CriadorDemanda"
     created_at: datetime
+

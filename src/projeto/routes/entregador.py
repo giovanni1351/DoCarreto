@@ -3,9 +3,11 @@ from typing import Annotated
 from auth import UserByRole
 from database import AsyncSessionDep
 from fastapi import APIRouter, Depends, HTTPException, status
+from schemas.candidatura import Candidatura
+from schemas.demand import Demand, DemandStatus
 from schemas.entregador import Entregador, EntregadorCreate
 from schemas.user import User, UserTypes
-from sqlmodel import col, select
+from sqlmodel import and_, col, or_, select
 
 router = APIRouter(prefix="/entregador", tags=["Entregador"])
 
@@ -55,3 +57,28 @@ async def deletar_conta_entregador(
             status_code=status.HTTP_410_GONE, detail="Entregador ja deletado"
         )
     return entregador_profile
+
+
+@router.get("/demandas")
+async def get_entreagdor_demandas(
+    session: AsyncSessionDep,
+    current_user: Annotated[User, Depends(UserByRole([UserTypes.ENTREGADOR]))],
+) -> list[Demand]:
+    demandas = list(
+        (
+            await session.exec(
+                select(Demand, Candidatura)
+                .where(
+                    or_(
+                        and_(
+                            col(Demand.status) != DemandStatus.CANCELADA,
+                            col(Demand.status) != DemandStatus.EM_ANDAMENTO,
+                        ),
+                        col(Candidatura.entregador_id) == current_user.id,
+                    ),
+                )
+                .join(Candidatura, isouter=True)
+            )
+        ).fetchall()
+    )
+    return [demanda_candidatura[0] for demanda_candidatura in demandas]
