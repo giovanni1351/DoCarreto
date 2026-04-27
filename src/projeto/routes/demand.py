@@ -4,10 +4,11 @@ from uuid import UUID
 from auth import UserByRole, get_current_user
 from database import AsyncSessionDep
 from fastapi import APIRouter, Depends, HTTPException, status
+from schemas.candidatura import Candidatura
 from schemas.demand import Demand, DemandCreate, DemandStatus, DemandUpdate
 from schemas.user import User, UserTypes
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import and_, col, select
+from sqlmodel import and_, col, delete, select
 
 router = APIRouter(prefix="/demand", tags=["Demand"])
 
@@ -89,6 +90,11 @@ async def cancelar_demanda(
 
     demand.status = DemandStatus.CANCELADA
     session.add(demand)
+    await session.exec(
+        delete(Candidatura).where(
+            col(Candidatura.demanda_id) == demand.id,
+        )
+    )
     await session.commit()
     await session.refresh(demand)
 
