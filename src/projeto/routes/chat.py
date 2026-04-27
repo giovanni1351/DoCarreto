@@ -6,8 +6,9 @@ from database import AsyncSessionDep, async_engine
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from manager.conection import ConnectionManager
 from schemas.candidatura import Candidatura
-from schemas.chat import Chat
+from schemas.chat import Chat, ChatPublic
 from schemas.demand import Demand
+from schemas.entregador import Entregador
 from schemas.mensagens import Mensagem
 from schemas.user import User, UserTypes
 from sqlmodel import col, or_, select
@@ -26,9 +27,9 @@ async def get_all_chats(
     current_user: Annotated[
         User, Depends(UserByRole([UserTypes.CRIADOR_DEMANDA, UserTypes.ENTREGADOR]))
     ],
-) -> list[Chat]:
+) -> list[ChatPublic]:
 
-    chats = (
+    rows = (
         await session.exec(
             select(Chat, Candidatura, Demand)
             .where(
@@ -42,7 +43,27 @@ async def get_all_chats(
         )
     ).all()
 
-    return [result[0] for result in chats]
+    result: list[ChatPublic] = []
+    for chat, candidatura, demand in rows:
+        entregador = await session.get(Entregador, candidatura.entregador_id)
+        entregador_user = await session.get(User, candidatura.entregador_id) if entregador else None
+        criador_user = await session.get(User, demand.user_id)
+
+        result.append(
+            ChatPublic(
+                id=chat.id,
+                candidatura_id=chat.candidatura_id,
+                demanda_id=candidatura.demanda_id,
+                demanda_titulo=demand.title,
+                demanda_origem=demand.endereco_origem,
+                demanda_destino=demand.endereco_destino,
+                entregador_nome=entregador_user.nome if entregador_user else None,
+                criador_nome=criador_user.nome if criador_user else None,
+                created_at=chat.created_at,
+            )
+        )
+
+    return result
 
 
 # ---------------------------------------------------------------------------

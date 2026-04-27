@@ -146,6 +146,12 @@ export default function MotoristaHomeScreen() {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerBtn}
+            onPress={() => router.push("/chats")}
+          >
+            <Ionicons name="chatbubbles-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerBtn}
             onPress={() => router.push("/minhas-candidaturas")}
           >
             <MaterialCommunityIcons name="send-clock-outline" size={22} color="#fff" />

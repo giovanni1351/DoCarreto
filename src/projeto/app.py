@@ -1,7 +1,7 @@
 from typing import Any, Literal
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware  # ← ADICIONE ESTA LINHA
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from routes import (
     candidatura,
@@ -17,11 +17,10 @@ from uvicorn import run
 
 app = FastAPI()
 
-# ← ADICIONE ISTO (antes de incluir as rotas)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite tudo (desenvolvimento)
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # deve ser False quando allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )

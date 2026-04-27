@@ -20,6 +20,7 @@ dependencies = [
     "sqlmodel>=0.0.27",
     "tzdata>=2025.2",
     "uvicorn>=0.37.0",
+    "websockets>=16.0",
 ]
 
 

@@ -54,6 +54,12 @@ export type CandidaturaStatus = "pendente" | "aceita" | "recusada";
 export type Chat = {
   id: string;
   candidatura_id: string;
+  demanda_id: string;
+  demanda_titulo: string;
+  demanda_origem: string;
+  demanda_destino: string;
+  entregador_nome: string | null;
+  criador_nome: string | null;
   created_at: string;
 };
 
@@ -301,4 +307,41 @@ export async function cancelDemand(token: string, demandId: string) {
 
 export async function aceitarCandidatura(token: string, candidaturaId: string) {
   return request<Chat>(`/candidatura/aceitar/${candidaturaId}`, { method: "PUT", token });
+}
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+
+export type Mensagem = {
+  tipo: "mensagem";
+  id: string;
+  chat_id: string;
+  remetente_id: string;
+  conteudo: string;
+  lida: boolean;
+  created_at: string;
+};
+
+export type MensagemLidaEvent = {
+  tipo: "lida";
+  mensagem_id: string;
+};
+
+export type MensagemErroEvent = {
+  tipo: "erro";
+  detalhe: string;
+};
+
+export type ChatEvent = Mensagem | MensagemLidaEvent | MensagemErroEvent;
+
+export async function listChats(token: string) {
+  return request<Chat[]>("/chat/", { token });
+}
+
+export async function listMensagens(token: string, chatId: string) {
+  return request<Mensagem[]>(`/mensagens/${chatId}`, { token });
+}
+
+export function createChatWebSocket(chatId: string, token: string): WebSocket {
+  const base = API_BASE_URL.replace(/^http/, "ws");
+  return new WebSocket(`${base}/chat/conversar/${chatId}?token=${encodeURIComponent(token)}`);
 }

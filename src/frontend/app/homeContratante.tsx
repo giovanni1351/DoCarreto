@@ -129,14 +129,23 @@ export default function ContratanteHomeScreen() {
           <Text style={styles.title}>Olá, {user?.nome ?? "Usuário"}</Text>
           <Text style={styles.subtitle}>Gerencie suas demandas</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => {
-            signOut();
-            router.replace("/login");
-          }}
-        >
-          <Ionicons name="log-out-outline" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => router.push("/chats")}
+          >
+            <Ionicons name="chatbubbles-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => {
+              signOut();
+              router.replace("/login");
+            }}
+          >
+            <Ionicons name="log-out-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stats */}
@@ -238,6 +247,14 @@ const styles = StyleSheet.create({
   },
   title: { color: "#fff", fontSize: 22, fontWeight: "700" },
   subtitle: { color: "#cbd5e1", marginTop: 2 },
+  headerActions: { flexDirection: "row", gap: 4 },
+  headerBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   statsRow: {
     flexDirection: "row",
     flexWrap: "wrap",

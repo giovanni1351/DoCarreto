@@ -1,12 +1,7 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Field, SQLModel
-
-if TYPE_CHECKING:
-    from schemas.criador_demanda import CriadorDemanda
-    from schemas.entregador import Entregador
 
 
 class Chat(SQLModel, table=True):
@@ -19,6 +14,9 @@ class ChatPublic(SQLModel):
     id: UUID
     candidatura_id: UUID
     demanda_id: UUID
-    entregador: "Entregador"
-    criador_demanda: "CriadorDemanda"
+    demanda_titulo: str
+    demanda_origem: str
+    demanda_destino: str
+    entregador_nome: str | None
+    criador_nome: str | None
     created_at: datetime
